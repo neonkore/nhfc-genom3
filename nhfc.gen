@@ -1,0 +1,85 @@
+/*/
+ * Copyright (c) 2015 LAAS/CNRS
+ * All rights reserved.
+ *
+ * Redistribution and use  in source  and binary  forms,  with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *   1. Redistributions of  source  code must retain the  above copyright
+ *      notice and this list of conditions.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice and  this list of  conditions in the  documentation and/or
+ *      other materials provided with the distribution.
+ *
+ *					Anthony Mallet on Tue Aug 11 2015
+ */
+#pragma require "openrobots-idl >= 1.1"
+
+#include "or/pose/pose_estimator.gen"
+#include "or/robot/rotorcraft.gen"
+
+component nhfc {
+  version	"1.0";
+  email		"openrobots@laas.fr";
+  lang		"c";
+  require	"genom3 >= 2.99.26";
+
+  uses		or_rotorcraft, or_pose_estimator;
+
+  port in	or_pose_estimator::state reference;
+  port in	or_pose_estimator::state imu;
+
+  exception e_input;
+
+  ids {
+    struct servo_s {
+      struct pid_s {
+        double Kp, Kd;
+      } att_pid, o_pid, xy_pid, z_pid;
+      double mass, vmin, vmax;
+      double xdes, ydes, zdes, odes;
+      double pulsedes, raddes;
+    } servo;
+  };
+
+  attribute set_att_pid(in servo.att_pid);
+  attribute set_o_pid(in servo.o_pid);
+  attribute set_xy_pid(in servo.xy_pid);
+  attribute set_z_pid(in servo.z_pid);
+  attribute set_mass(in servo.mass);
+  attribute set_vlimit(in servo.vmin, in servo.vmax);
+  attribute set_pos(in servo.xdes, in servo.ydes, in servo.zdes, in servo.odes);
+  attribute set_circle(in servo.raddes, in servo.pulsedes);
+
+  task main {
+    period 1ms;
+
+    codel<start> nhfc_main_start(out servo) yield ether;
+  };
+
+
+  /* --- control ----------------------------------------------------------- */
+
+  activity servo() {
+    doc		"XXX Servo";
+    task	main;
+
+    codel<start> nhfc_servo_start(in reference,
+                                  out servo.xdes, out servo.ydes,
+                                  out servo.zdes, out servo.odes)
+      yield step;
+    codel<step> nhfc_servo_step(in servo, in reference, in imu, out cmd_wrench)
+      yield pause::step;
+
+    codel<stop> mk_servo_stop(out cmd_wrench)
+      yield ether;
+
+    throw e_input;
+  };
+
+  function stop() {
+    doc		"XXX Servo";
+    interrupt servo;
+  };
+};

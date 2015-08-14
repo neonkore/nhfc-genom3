@@ -1,0 +1,15 @@
+# pkg-config file for nhfc interface and codels library
+#
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+datarootdir=@datarootdir@
+idldir=@datadir@/idl
+
+Name: nhfc-genom3
+Description: nhfc interface and codels library
+Version: @PACKAGE_VERSION@
+Requires: openrobots-idl >= 1.1, genom3 >= 2.99.26
+Cflags: -I${includedir} -I${idldir}
+Libs: -L${libdir} -lnhfc_codels
