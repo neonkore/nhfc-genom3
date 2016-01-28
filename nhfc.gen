@@ -1,5 +1,5 @@
 /*/
- * Copyright (c) 2015 LAAS/CNRS
+ * Copyright (c) 2015-2016 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -20,36 +20,32 @@
 #include "or/robot/rotorcraft.gen"
 
 component nhfc {
-  version	"1.0";
-  email		"openrobots@laas.fr";
-  lang		"c";
-  require	"genom3 >= 2.99.26";
+  version		"1.0";
+  email			"openrobots@laas.fr";
+  lang			"c";
+  require		"genom3 >= 2.99.26";
+  codels-require	"eigen3";
 
   uses		or_rotorcraft, or_pose_estimator;
 
+  port in	or_pose_estimator::state state;
   port in	or_pose_estimator::state reference;
-  port in	or_pose_estimator::state imu;
 
   exception e_input;
 
   ids {
     struct servo_s {
-      struct pid_s {
-        double Kp, Kd;
-      } att_pid, o_pid, xy_pid, z_pid;
-      double mass, vmin, vmax;
-      double xdes, ydes, zdes, odes;
+      struct gain_s { double Kx, Kq, Kv, Kw; } gain;
+      double mass;
+
+      or_pose_estimator::state desired;
       double pulsedes, raddes;
     } servo;
   };
 
-  attribute set_att_pid(in servo.att_pid);
-  attribute set_o_pid(in servo.o_pid);
-  attribute set_xy_pid(in servo.xy_pid);
-  attribute set_z_pid(in servo.z_pid);
+  attribute set_servo_gain(in servo.gain);
   attribute set_mass(in servo.mass);
-  attribute set_vlimit(in servo.vmin, in servo.vmax);
-  attribute set_pos(in servo.xdes, in servo.ydes, in servo.zdes, in servo.odes);
+
   attribute set_circle(in servo.raddes, in servo.pulsedes);
 
   task main {
@@ -65,11 +61,10 @@ component nhfc {
     doc		"XXX Servo";
     task	main;
 
-    codel<start> nhfc_servo_start(in reference,
-                                  out servo.xdes, out servo.ydes,
-                                  out servo.zdes, out servo.odes)
+    codel<start> nhfc_servo_start(in state, out servo.desired)
       yield step;
-    codel<step> nhfc_servo_step(in servo, in reference, in imu, out cmd_wrench)
+    codel<step> nhfc_servo_step(in servo, in state, in reference,
+                                out cmd_wrench)
       yield pause::step;
 
     codel<stop> mk_servo_stop(out cmd_wrench)

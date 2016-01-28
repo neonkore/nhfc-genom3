@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 LAAS/CNRS
+ * Copyright (c) 2015-2016 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -21,6 +21,7 @@
 #include <stdio.h>
 
 #include "nhfc_c_types.h"
+#include "codels.h"
 
 
 /* --- Task main -------------------------------------------------------- */
@@ -34,15 +35,22 @@
 genom_event
 nhfc_main_start(nhfc_ids_servo_s *servo, genom_context self)
 {
-  servo->att_pid.Kp = 2.7;	servo->att_pid.Kd = 0.35;
-  servo->o_pid.Kp = 0.25;	servo->o_pid.Kd = 0.015;
-  servo->xy_pid.Kp = 8;		servo->xy_pid.Kd = 6;
-  servo->z_pid.Kp = 12;		servo->z_pid.Kd = 4;
+  servo->gain.Kx = 1.;
+  servo->gain.Kq = 1.;
+  servo->gain.Kv = 1.;
+  servo->gain.Kw = 1.;
 
   servo->mass = 0.950;
-  servo->vmin = 18;		servo->vmax = 90;
 
-  servo->xdes = servo->ydes = servo->zdes = servo->odes = 0.;
+  servo->desired.pos._present = true;
+  servo->desired.pos._value.x = 0.;
+  servo->desired.pos._value.y = 0.;
+  servo->desired.pos._value.z = 0.;
+  servo->desired.pos._value.qw = 1.;
+  servo->desired.pos._value.qx = 0.;
+  servo->desired.pos._value.qy = 0.;
+  servo->desired.pos._value.qz = 0.;
+
   servo->pulsedes = servo->raddes = 0.;
 
   return nhfc_ether;
@@ -60,34 +68,19 @@ nhfc_main_start(nhfc_ids_servo_s *servo, genom_context self)
 FILE *flog;
 
 genom_event
-nhfc_servo_start(const nhfc_reference *reference, double *xdes,
-                 double *ydes, double *zdes, double *odes,
-                 genom_context self)
+nhfc_servo_start(const nhfc_state *state,
+                 or_pose_estimator_state *desired, genom_context self)
 {
-  const or_pose_estimator_state *ref_data = reference->data(self);
-  double qw, qx, qy, qz;
+  const or_pose_estimator_state *state_d;
 
-  flog = fopen("log", "w");
-  fprintf(flog, "# 1:ro 2:pi 3:ya 4:vro 5:vpi 6:vya 7:fz 8:tx 9:ty 10:tz\n");
+  flog = fopen("/tmp/nhfc.log", "w");
+  fprintf(flog, "ts fz tx ty tz\n");
 
-  if (!ref_data) {
-    *xdes = *ydes = *zdes = *odes = 0.;
-    return nhfc_step;
-  }
+  if (state->read(self)) return nhfc_e_input(self);
+  state_d = state->data(self);
+  if (!state_d || !state_d->pos._present) return nhfc_e_input(self);
 
-  if (reference->read(self) != genom_ok) return nhfc_e_input(self);
-  if (!ref_data->pos._present) return nhfc_e_input(self);
-
-  *xdes = ref_data->pos._value.x;
-  *ydes = ref_data->pos._value.y;
-  *zdes = ref_data->pos._value.z;
-
-  qw = ref_data->pos._value.qw;
-  qx = ref_data->pos._value.qx;
-  qy = ref_data->pos._value.qy;
-  qz = ref_data->pos._value.qz;
-  *odes = atan2(2 * (qw*qz + qx*qy), 1 - 2 * (qy*qy + qz*qz));
-
+  desired->pos = state_d->pos;
   return nhfc_step;
 }
 
@@ -98,183 +91,82 @@ nhfc_servo_start(const nhfc_reference *reference, double *xdes,
  * Throws nhfc_e_input.
  */
 genom_event
-nhfc_servo_step(const nhfc_ids_servo_s *servo,
-                const nhfc_reference *reference, const nhfc_imu *imu,
+nhfc_servo_step(const nhfc_ids_servo_s *servo, const nhfc_state *state,
+                const nhfc_reference *reference,
                 const nhfc_cmd_wrench *cmd_wrench, genom_context self)
 {
-  const or_pose_estimator_state *refpos, *imudata;
-  or_rotorcraft_ts_wrench *cmddata;
+  const or_pose_estimator_state *state_d;
+  /* coming soon: const or_pose_estimator_state *reference_d; */
+  or_rotorcraft_ts_wrench *cmd_wrench_d;
+  or_pose_estimator_state desired;
 
-  double dt = 0.001;
-
-  double thrust;
-  double roll, pitch, yaw;
-  static double vroll, vpitch, vyaw;
-  double rolldes, pitchdes, sinrolldes, sinpitchdes;
-
-  static double x, y, z;
-  double qx, qy, qz, qw;
-  static double lpvx, lpvy, lpvz;
-
-  double xdes, ydes, zdes;
-  double vxdes, vydes, vzdes;
-  double axdes, aydes, azdes;
+  const double dt = 0.001;
   static double t;
 
-  double xerr, yerr, zerr, oerr;
   struct timeval tv;
+  int s;
 
   /* circle */
   t += dt;
-  xdes = servo->xdes + servo->raddes * (cos(servo->pulsedes * t) - 1);
-  ydes = servo->ydes + servo->raddes * sin(servo->pulsedes * t);
-  zdes = servo->zdes + 0*servo->raddes * sin(servo->pulsedes * t);
+  desired.pos._present = true;
+  desired.pos._value.x = servo->desired.pos._value.x
+    + servo->raddes * (cos(servo->pulsedes * t) - 1);
+  desired.pos._value.y = servo->desired.pos._value.y
+    + servo->raddes * sin(servo->pulsedes * t);
+  desired.pos._value.z = servo->desired.pos._value.z
+    + 0*servo->raddes * sin(servo->pulsedes * t);
 
-  vxdes = - servo->raddes * servo->pulsedes * sin(servo->pulsedes * t);
-  vydes = + servo->raddes * servo->pulsedes * cos(servo->pulsedes * t);
-  vzdes = 0 * servo->raddes * servo->pulsedes * cos(servo->pulsedes * t);
+  desired.pos._value.qw = servo->desired.pos._value.qw;
+  desired.pos._value.qx = servo->desired.pos._value.qx;
+  desired.pos._value.qy = servo->desired.pos._value.qy;
+  desired.pos._value.qz = servo->desired.pos._value.qz;
 
-  axdes = - servo->raddes *
+  desired.vel._present = true;
+  desired.vel._value.vx =
+    - servo->raddes * servo->pulsedes * sin(servo->pulsedes * t);
+  desired.vel._value.vy =
+    + servo->raddes * servo->pulsedes * cos(servo->pulsedes * t);
+  desired.vel._value.vz =
+    0 * servo->raddes * servo->pulsedes * cos(servo->pulsedes * t);
+
+  desired.vel._value.wx = 0.;
+  desired.vel._value.wy = 0.;
+  desired.vel._value.wz = 0.;
+
+  desired.acc._present = true;
+  desired.acc._value.ax = - servo->raddes *
     servo->pulsedes * servo->pulsedes * cos(servo->pulsedes * t);
-  aydes = - servo->raddes *
+  desired.acc._value.ay = - servo->raddes *
     servo->pulsedes * servo->pulsedes * sin(servo->pulsedes * t);
-  azdes = - 0 * servo->raddes *
+  desired.acc._value.az = - 0 * servo->raddes *
     servo->pulsedes * servo->pulsedes * sin(servo->pulsedes * t);
 
-  /* position */
-  reference->read(self);
-  imu->read(self);
-  refpos = reference->data(self);
-  imudata = imu->data(self);
-  if (!imudata) return nhfc_stop;
-  if (!imudata->vel._present) return nhfc_stop;
 
-  if (refpos && refpos->pos._present) {
-    x = refpos->pos._value.x;
-    y = refpos->pos._value.y;
-    z = refpos->pos._value.z;
+  /* controller */
+  if (state->read(self)) return nhfc_e_input(self);
+  state_d = state->data(self);
+  if (!state_d) return nhfc_e_input(self);
 
-    qw = refpos->pos._value.qw;
-    qx = refpos->pos._value.qx;
-    qy = refpos->pos._value.qy;
-    qz = refpos->pos._value.qz;
-    yaw = atan2(2 * (qw*qz + qx*qy), 1 - 2 * (qy*qy + qz*qz));
-  } else
-    yaw = 0.;
+  cmd_wrench_d = cmd_wrench->data(self);
 
-  qw = imudata->pos._value.qw;
-  qx = imudata->pos._value.qx;
-  qy = imudata->pos._value.qy;
-  qz = imudata->pos._value.qz;
-  roll = atan2(2 * (qw*qx + qy*qz), 1 - 2 * (qx*qx + qy*qy));
-  pitch = asin(2 * (qw*qy - qz*qx));
-
-  /* linear velocity */
-  if (refpos == NULL) {
-    lpvx = vxdes;
-    lpvy = vydes;
-    lpvz = vzdes;
-  } else {
-    static or_time_ts ts;
-
-    if (ts.sec != refpos->ts.sec || ts.nsec != refpos->ts.nsec) {
-      static double px, py, pz;
-      double dtref;
-      double lpa = 0.5;
-
-      dtref = (refpos->ts.sec - ts.sec) + (refpos->ts.nsec - ts.nsec)*1e-9;
-
-      lpvx = lpa * lpvx + (1-lpa) * (x - px)/dtref;
-      lpvy = lpa * lpvy + (1-lpa) * (y - py)/dtref;
-      lpvz = lpa * lpvz + (1-lpa) * (z - pz)/dtref;
-
-      px = x; py = y; pz = z;
-      ts = refpos->ts;
-    }
-  }
-
-  /* angular velocity */
-  vroll = imudata->vel._value.wx;
-  vpitch = imudata->vel._value.wy;
-  vyaw = imudata->vel._value.wz;
-
-
-  /* position control */
-  if (refpos == NULL) {
-    xerr = yerr = zerr = oerr = 0.;
-  } else {
-    xerr = xdes - x;
-    if (fabs(xerr) > 0.15) xerr = copysign(0.15, xerr);
-
-    yerr = ydes - y;
-    if (fabs(yerr) > 0.15) yerr = copysign(0.15, yerr);
-
-    zerr = zdes - z;
-    if (fabs(zerr) > 0.15) zerr = copysign(0.15, zerr);
-
-    oerr = servo->odes - yaw;
-    if (fabs(oerr) > 15*M_PI/180.) oerr = copysign(15*M_PI/180., oerr);
-  }
-
-  thrust =
-    servo->mass * (
-      9.81 + azdes +
-      servo->z_pid.Kp * zerr +
-      servo->z_pid.Kd * (vzdes - lpvz)
-      ) / cos(roll)/cos(pitch);
-  if (fabs(thrust) > 20) thrust = copysign(20, thrust);
-
-  sinrolldes = servo->mass/thrust *
-    (sin(yaw) * (axdes +
-                 servo->xy_pid.Kp * xerr +
-                 servo->xy_pid.Kd * (vxdes - lpvx)) +
-     -cos(yaw) * (aydes +
-                 servo->xy_pid.Kp * yerr +
-                 servo->xy_pid.Kd * (vydes - lpvy)));
-  if (fabs(sinrolldes) > 0.95) sinrolldes = copysign(0.95, sinrolldes);
-  rolldes = asin(sinrolldes);
-
-  sinpitchdes = servo->mass/thrust/cos(roll) *
-    (cos(yaw) * (axdes +
-                 servo->xy_pid.Kp * xerr +
-                 servo->xy_pid.Kd * (vxdes - lpvx)) +
-     sin(yaw) * (aydes +
-                 servo->xy_pid.Kp * yerr +
-                 servo->xy_pid.Kd * (vydes - lpvy)));
-  if (fabs(sinpitchdes) > 0.95) sinpitchdes = copysign(0.95, sinpitchdes);
-  pitchdes = asin(sinpitchdes);
-
-  /* wrench */
-  cmddata = cmd_wrench->data(self);
+  s = nhfc_controller(servo, state_d, &desired, &cmd_wrench_d->w);
+  if (s) return nhfc_pause_step;
 
   gettimeofday(&tv, NULL);
-  cmddata->ts.sec = tv.tv_sec;
-  cmddata->ts.nsec = tv.tv_usec * 1000;
-
-  cmddata->w.f.x = 0.;
-  cmddata->w.f.y = 0.;
-  cmddata->w.f.z = thrust;
-
-  cmddata->w.t.x =
-    servo->att_pid.Kp * (rolldes - roll) +
-    - servo->att_pid.Kd * vroll;
-  cmddata->w.t.y =
-    servo->att_pid.Kp * (pitchdes - pitch) +
-    - servo->att_pid.Kd * vpitch;
-  cmddata->w.t.z =
-    servo->o_pid.Kp * oerr +
-    - servo->o_pid.Kd * vyaw;
-
+  cmd_wrench_d->ts.sec = tv.tv_sec;
+  cmd_wrench_d->ts.nsec = tv.tv_usec * 1000;
   cmd_wrench->write(self);
 
-  printf("ro: %2.3f pi: %2.3f ya: %2.3f\n"
-         "fz: %2.3f tx: %2.3f ty: %2.3f tz: %2.3f\n",
-         roll*180/M_PI, pitch*180/M_PI, yaw*180/M_PI,
-         cmddata->w.f.z, cmddata->w.t.x, cmddata->w.t.y, cmddata->w.t.z);
-  fprintf(flog, "%f %f %f %f %f %f %f %f %f %f\n",
-         roll*180/M_PI, pitch*180/M_PI, yaw*180/M_PI,
-         vroll*180/M_PI, vpitch*180/M_PI, vyaw*180/M_PI,
-         cmddata->w.f.z, cmddata->w.t.x, cmddata->w.t.y, cmddata->w.t.z);
+#if 1
+  printf("fz: %2.3f tx: %2.3f ty: %2.3f tz: %2.3f\n",
+         cmd_wrench_d->w.f.z,
+         cmd_wrench_d->w.t.x, cmd_wrench_d->w.t.y, cmd_wrench_d->w.t.z);
+#endif
+  fprintf(flog, "%f %f %f %f %f\n",
+          tv.tv_sec + 1e-6*tv.tv_usec,
+          cmd_wrench_d->w.f.z,
+          cmd_wrench_d->w.t.x, cmd_wrench_d->w.t.y, cmd_wrench_d->w.t.z);
+
   return nhfc_pause_step;
 }
 

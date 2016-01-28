@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015 LAAS/CNRS
+# Copyright (c) 2015-2016 LAAS/CNRS
 # All rights reserved.
 #
 # Redistribution and use  in source  and binary  forms,  with or without
@@ -19,6 +19,8 @@ lib_LTLIBRARIES = libnhfc_codels.la
 libnhfc_codels_la_SOURCES=	nhfc_c_types.h
 libnhfc_codels_la_SOURCES+=	nhfc_codels.c
 libnhfc_codels_la_SOURCES+=	nhfc_main_codels.c
+libnhfc_codels_la_SOURCES+=	controller.cc
+libnhfc_codels_la_SOURCES+=	codels.h
 
 libnhfc_codels_la_CPPFLAGS=	$(requires_CFLAGS)
 libnhfc_codels_la_LDFLAGS=	$(requires_LIBS)
