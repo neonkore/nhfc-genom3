@@ -40,7 +40,7 @@ int
 nhfc_controller(const nhfc_ids_servo_s *servo,
                 const or_pose_estimator_state *state,
                 const or_pose_estimator_state *desired,
-                or_rb3d_wrench *wrench)
+                double *thrust, double torque[3])
 {
   Eigen::Matrix3d Rd;
   Eigen::Quaternion<double> qd;
@@ -52,7 +52,8 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
   Eigen::Vector3d ex, ev, eR, ew;
 
-  Eigen::Vector3d f, t;
+  Eigen::Vector3d f;
+  Eigen::Map<Eigen::Matrix<double, 3, 1> > t(torque);
   Eigen::Matrix3d E;
   int i;
 
@@ -179,16 +180,9 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   ew = R.transpose() * (w - wd);
 
 
-  /* force */
-  wrench->f.x = 0.;
-  wrench->f.y = 0.;
-  wrench->f.z = f.dot(R.col(2));
-
-  /* torque */
+  /* output */
+  *thrust = f.dot(R.col(2));
   t = - servo->gain.Kq * eR - servo->gain.Kw * ew;
-  wrench->t.x = t(0);
-  wrench->t.y = t(1);
-  wrench->t.z = t(2);
 
   return 0;
 }

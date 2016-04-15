@@ -14,7 +14,7 @@
  *
  *					Anthony Mallet on Tue Aug 11 2015
  */
-#pragma require "openrobots-idl >= 1.1"
+#pragma require "openrobots-idl >= 1.2"
 
 #include "or/pose/pose_estimator.gen"
 #include "or/robot/rotorcraft.gen"
@@ -40,6 +40,8 @@ component nhfc {
 
       or_pose_estimator::state desired;
       double pulsedes, raddes;
+
+      double vmin, vmax;
     } servo;
   };
 
@@ -64,10 +66,10 @@ component nhfc {
     codel<start> nhfc_servo_start(in state, out servo.desired)
       yield step;
     codel<step> nhfc_servo_step(in servo, in state, in reference,
-                                out cmd_wrench)
+                                out propeller_input)
       yield pause::step;
 
-    codel<stop> mk_servo_stop(out cmd_wrench)
+    codel<stop> mk_servo_stop(out propeller_input)
       yield ether;
 
     throw e_input;

@@ -33,7 +33,7 @@ extern "C" {
   int	nhfc_controller(const nhfc_ids_servo_s *servo,
                         const or_pose_estimator_state *state,
                         const or_pose_estimator_state *desired,
-                        or_rb3d_wrench *wrench);
+                        double *thrust, double torque[3]);
 
 #ifdef __cplusplus
 }
