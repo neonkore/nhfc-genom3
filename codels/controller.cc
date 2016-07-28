@@ -89,7 +89,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
 
   /* current state */
-  if (state->pos._present && !isnan(state->pos._value.x))
+  if (state->pos._present && !std::isnan(state->pos._value.x))
     if (state->pos_cov._present && (
           state->pos_cov._value.cov[0] > 0.1 ||
           state->pos_cov._value.cov[2] > 0.1 ||
@@ -100,7 +100,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   else
     x = xd;
 
-  if (state->pos._present && !isnan(state->pos._value.qw))
+  if (state->pos._present && !std::isnan(state->pos._value.qw))
     if (state->pos_cov._present && (
           state->pos_cov._value.cov[9] > 0.1 ||
           state->pos_cov._value.cov[14] > 0.1 ||
@@ -116,7 +116,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
   R = q.matrix();
 
-  if (state->vel._present && !isnan(state->vel._value.vx))
+  if (state->vel._present && !std::isnan(state->vel._value.vx))
     if (state->vel_cov._present && (
           state->vel_cov._value.cov[0] > 0.1 ||
           state->vel_cov._value.cov[2] > 0.1 ||
@@ -127,7 +127,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   else
     v = vd;
 
-  if (state->vel._present && !isnan(state->vel._value.wx))
+  if (state->vel._present && !std::isnan(state->vel._value.wx))
     if (state->vel_cov._present && (
           state->vel_cov._value.cov[9] > 0.1 ||
           state->vel_cov._value.cov[14] > 0.1 ||
