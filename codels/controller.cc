@@ -89,52 +89,43 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
 
   /* current state */
-  if (state->pos._present && !std::isnan(state->pos._value.x))
-    if (state->pos_cov._present && (
-          state->pos_cov._value.cov[0] > 0.1 ||
-          state->pos_cov._value.cov[2] > 0.1 ||
-          state->pos_cov._value.cov[5] > 0.1))
-      x = xd;
-    else
-      x << state->pos._value.x, state->pos._value.y, state->pos._value.z;
+  if (state->pos._present && !std::isnan(state->pos._value.x) &&
+      state->pos_cov._present &&
+      state->pos_cov._value.cov[0] < 0.1 &&
+      state->pos_cov._value.cov[2] < 0.1 &&
+      state->pos_cov._value.cov[5] < 0.1)
+    x << state->pos._value.x, state->pos._value.y, state->pos._value.z;
   else
     x = xd;
 
-  if (state->pos._present && !std::isnan(state->pos._value.qw))
-    if (state->pos_cov._present && (
-          state->pos_cov._value.cov[9] > 0.1 ||
-          state->pos_cov._value.cov[14] > 0.1 ||
-          state->pos_cov._value.cov[20] > 0.1 ||
-          state->pos_cov._value.cov[27] > 0.1))
-      q = qd;
-    else
-      q.coeffs() <<
-        state->pos._value.qx, state->pos._value.qy, state->pos._value.qz,
-        state->pos._value.qw;
+  if (state->pos._present && !std::isnan(state->pos._value.qw) &&
+      state->pos_cov._present &&
+      state->pos_cov._value.cov[9] < 0.1 &&
+      state->pos_cov._value.cov[14] < 0.1 &&
+      state->pos_cov._value.cov[20] < 0.1 &&
+      state->pos_cov._value.cov[27] < 0.1)
+    q.coeffs() <<
+      state->pos._value.qx, state->pos._value.qy, state->pos._value.qz,
+      state->pos._value.qw;
   else
     q = qd;
-
   R = q.matrix();
 
-  if (state->vel._present && !std::isnan(state->vel._value.vx))
-    if (state->vel_cov._present && (
-          state->vel_cov._value.cov[0] > 0.1 ||
-          state->vel_cov._value.cov[2] > 0.1 ||
-          state->vel_cov._value.cov[5] > 0.1))
-      v = vd;
-    else
-      v << state->vel._value.vx, state->vel._value.vy, state->vel._value.vz;
+  if (state->vel._present && !std::isnan(state->vel._value.vx) &&
+      state->vel_cov._present &&
+      state->vel_cov._value.cov[0] < 0.1 &&
+      state->vel_cov._value.cov[2] < 0.1 &&
+      state->vel_cov._value.cov[5] < 0.1)
+    v << state->vel._value.vx, state->vel._value.vy, state->vel._value.vz;
   else
     v = vd;
 
-  if (state->vel._present && !std::isnan(state->vel._value.wx))
-    if (state->vel_cov._present && (
-          state->vel_cov._value.cov[9] > 0.1 ||
-          state->vel_cov._value.cov[14] > 0.1 ||
-          state->vel_cov._value.cov[20] > 0.1))
-      w = wd;
-    else
-      w << state->vel._value.wx, state->vel._value.wy, state->vel._value.wz;
+  if (state->vel._present && !std::isnan(state->vel._value.wx) &&
+      state->vel_cov._present &&
+      state->vel_cov._value.cov[9] < 0.1 &&
+      state->vel_cov._value.cov[14] < 0.1 &&
+      state->vel_cov._value.cov[20] < 0.1)
+    w << state->vel._value.wx, state->vel._value.wy, state->vel._value.wz;
   else
     w = wd;
 
