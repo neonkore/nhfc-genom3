@@ -24,6 +24,91 @@
 #include "codels.h"
 
 
+/* --- Function set_state ----------------------------------------------- */
+
+/** Codel nhfc_set_state of function set_state.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
+               const or_t3d_acc *acc, or_pose_estimator_state *desired,
+               genom_context self)
+{
+  struct timeval tv;
+
+  gettimeofday(&tv, NULL);
+  desired->ts.sec = tv.tv_sec;
+  desired->ts.nsec = tv.tv_usec * 1000.;
+
+  if (isnan(pos->x) || isnan(pos->qw))
+    desired->pos._present = false;
+  else {
+    desired->pos._present = true;
+    desired->pos._value = *pos;
+  }
+
+  if (isnan(vel->vx) || isnan(vel->wx))
+    desired->vel._present = false;
+  else {
+    desired->vel._present = true;
+    desired->vel._value = *vel;
+  }
+
+  if (isnan(acc->ax))
+    desired->acc._present = false;
+  else {
+    desired->acc._present = true;
+    desired->acc._value = *acc;
+  }
+
+  return genom_ok;
+}
+
+
+/* --- Function set_position -------------------------------------------- */
+
+/** Codel nhfc_set_position of function set_position.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+nhfc_set_position(double x, double y, double z, double yaw,
+                  or_pose_estimator_state *desired,
+                  genom_context self)
+{
+  struct timeval tv;
+
+  gettimeofday(&tv, NULL);
+  desired->ts.sec = tv.tv_sec;
+  desired->ts.nsec = tv.tv_usec * 1000.;
+
+  desired->pos._present = true;
+  desired->pos._value.x = x;
+  desired->pos._value.y = y;
+  desired->pos._value.z = z;
+  desired->pos._value.qw = cos(yaw/2.);
+  desired->pos._value.qx = 0.;
+  desired->pos._value.qy = 0.;
+  desired->pos._value.qz = sin(yaw/2.);
+
+  desired->vel._present = true;
+  desired->vel._value.vx = 0.;
+  desired->vel._value.vy = 0.;
+  desired->vel._value.vz = 0.;
+  desired->vel._value.wx = 0.;
+  desired->vel._value.wy = 0.;
+  desired->vel._value.wz = 0.;
+
+  desired->acc._present = true;
+  desired->acc._value.ax = 0.;
+  desired->acc._value.ay = 0.;
+  desired->acc._value.az = 0.;
+
+  return genom_ok;
+}
+
+
 /* --- Function log ----------------------------------------------------- */
 
 /** Codel nhfc_log of function log.

@@ -41,10 +41,12 @@ component nhfc {
       struct gain_s { double Kx, Kq, Kv, Kw; } gain;
       double mass;
 
-      or_pose_estimator::state desired;
-      double pulsedes, raddes;
-
       double vmin, vmax;
+      double fmin, fmax;
+
+      double d;
+      double kf;
+      double c;
     } servo;
 
     or_pose_estimator::state desired;
@@ -56,35 +58,66 @@ component nhfc {
   attribute set_servo_gain(in servo.gain);
   attribute set_mass(in servo.mass);
 
-  attribute set_circle(in servo.raddes, in servo.pulsedes);
+  attribute get_desired(out desired);
 
   task main {
     period 1ms;
 
-    codel<start> nhfc_main_start(out servo) yield ether;
+    codel<start> nhfc_main_start(out ::ids)
+      yield control;
+    codel<control> nhfc_main_control(in servo, in desired, in state,
+                                     in log, out propeller_input)
+      yield pause::control, stop;
+    codel<stop> mk_main_stop(out propeller_input)
+      yield ether;
   };
 
 
   /* --- control ----------------------------------------------------------- */
 
   activity servo() {
-    doc		"XXX Servo";
+    doc		"Track a desired position";
     task	main;
 
-    codel<start> nhfc_servo_start(in state, out servo.desired)
-      yield step;
-    codel<step> nhfc_servo_step(in servo, in state, in reference,
-                                out propeller_input)
-      yield pause::step;
-
-    codel<stop> mk_servo_stop(out propeller_input)
-      yield ether;
+    codel<start> nhfc_servo_main(in reference, out desired)
+      yield pause::start, ether;
 
     throw e_input;
   };
 
+  function set_state(
+    in or::t3d::pos pos =: "Position",
+    in or::t3d::vel vel =: "Velocity",
+    in or::t3d::acc acc =: "Acceleration") {
+    doc		"Set the desired state";
+
+    codel nhfc_set_state(in pos, in vel, in acc, out desired);
+
+    interrupt servo;
+  };
+
+  function set_position(
+    in double x, in double y, in double z, in double yaw) {
+    doc		"Set the desired position";
+
+    codel nhfc_set_position(in x, in y, in z, in yaw, out desired);
+
+    interrupt servo;
+  };
+
+  activity set_current_position() {
+    doc		"Set the desired position";
+    task	main;
+
+    codel<start> nhfc_set_current_position(in state, out desired)
+      yield ether;
+
+    interrupt servo;
+    throw e_input;
+  };
+
   function stop() {
-    doc		"XXX Servo";
+    doc		"Stop tracking a desired position";
     interrupt servo;
   };
 

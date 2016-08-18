@@ -31,160 +31,153 @@
 /** Codel nhfc_main_start of task main.
  *
  * Triggered by nhfc_start.
- * Yields to nhfc_ether.
+ * Yields to nhfc_control.
  */
 genom_event
-nhfc_main_start(nhfc_ids_servo_s *servo, genom_context self)
+nhfc_main_start(nhfc_ids *ids, genom_context self)
 {
-  servo->gain.Kx = 1.;
-  servo->gain.Kq = 1.;
-  servo->gain.Kv = 1.;
-  servo->gain.Kw = 1.;
+  ids->servo.gain.Kx = 25.;
+  ids->servo.gain.Kq = 3.;
+  ids->servo.gain.Kv = 12.;
+  ids->servo.gain.Kw = 0.3;
 
-  servo->mass = 0.950;
+  ids->servo.mass = 1.0;
 
-  servo->desired.pos._present = true;
-  servo->desired.pos._value.x = 0.;
-  servo->desired.pos._value.y = 0.;
-  servo->desired.pos._value.z = 0.;
-  servo->desired.pos._value.qw = 1.;
-  servo->desired.pos._value.qx = 0.;
-  servo->desired.pos._value.qy = 0.;
-  servo->desired.pos._value.qz = 0.;
+  ids->servo.vmax = 90.;
+  ids->servo.vmin = 16.;
 
-  servo->pulsedes = servo->raddes = 0.;
+  ids->servo.d = 0.25;
+  ids->servo.kf = 6.5e-4;
+  ids->servo.c = 0.0154;
 
-  servo->vmax = 90.;
-  servo->vmin = 15.;
+  ids->servo.fmax = ids->servo.vmax * ids->servo.vmax * ids->servo.kf;
+  ids->servo.fmin = ids->servo.vmin * ids->servo.vmin * ids->servo.kf;
 
-  return nhfc_ether;
+  ids->desired.pos._present = false;
+  ids->desired.pos_cov._present = false;
+  ids->desired.vel._present = false;
+  ids->desired.vel_cov._present = false;
+  ids->desired.acc._present = false;
+  ids->desired.acc_cov._present = false;
+
+  /* init logging */
+  ids->log = malloc(sizeof(*ids->log));
+  if (!ids->log) abort();
+  ids->log->f = NULL;
+
+  return nhfc_control;
 }
 
 
-/* --- Activity servo --------------------------------------------------- */
-
-/** Codel nhfc_servo_start of activity servo.
+/** Codel nhfc_main_control of task main.
  *
- * Triggered by nhfc_start.
- * Yields to nhfc_step.
- * Throws nhfc_e_input.
- */
-FILE *flog;
-
-genom_event
-nhfc_servo_start(const nhfc_state *state,
-                 or_pose_estimator_state *desired, genom_context self)
-{
-  const or_pose_estimator_state *state_d;
-
-  flog = fopen("/tmp/nhfc.log", "w");
-  fprintf(flog, "v1 v2 v3 v4\n");
-
-  if (state->read(self)) return nhfc_e_input(self);
-  state_d = state->data(self);
-  if (!state_d || !state_d->pos._present) return nhfc_e_input(self);
-
-  desired->pos = state_d->pos;
-  return nhfc_step;
-}
-
-/** Codel nhfc_servo_step of activity servo.
- *
- * Triggered by nhfc_step.
- * Yields to nhfc_pause_step.
- * Throws nhfc_e_input.
+ * Triggered by nhfc_control.
+ * Yields to nhfc_pause_control, nhfc_stop.
  */
 genom_event
-nhfc_servo_step(const nhfc_ids_servo_s *servo, const nhfc_state *state,
-                const nhfc_reference *reference,
-                const nhfc_propeller_input *propeller_input,
-                genom_context self)
+nhfc_main_control(const nhfc_ids_servo_s *servo,
+                  const or_pose_estimator_state *desired,
+                  const nhfc_state *state, const nhfc_log_s *log,
+                  const nhfc_propeller_input *propeller_input,
+                  genom_context self)
 {
-  const or_pose_estimator_state *state_d;
-  /* coming soon: const or_pose_estimator_state *reference_d; */
+  const or_pose_estimator_state *state_data;
   or_rotorcraft_input *input_data;
-  or_pose_estimator_state desired;
   double thrust, torque[3];
-
-  double tlimit;
-  double f[4];
-  int i;
-
-  static double t;
-  const double dt = 0.001;
-  const double d = 0.25;
-  const double kf = 6.5e-4;
-  const double c = 0.0154;
-
   struct timeval tv;
-  int s;
+  double f[4] = { 0., 0., 0., 0. };
+  int i, s;
 
-  /* circle */
-  t += dt;
-  desired.pos._present = true;
-  desired.pos._value.x = servo->desired.pos._value.x
-    + servo->raddes * (cos(servo->pulsedes * t) - 1);
-  desired.pos._value.y = servo->desired.pos._value.y
-    + servo->raddes * sin(servo->pulsedes * t);
-  desired.pos._value.z = servo->desired.pos._value.z
-    + 0*servo->raddes * sin(servo->pulsedes * t);
-
-  desired.pos._value.qw = servo->desired.pos._value.qw;
-  desired.pos._value.qx = servo->desired.pos._value.qx;
-  desired.pos._value.qy = servo->desired.pos._value.qy;
-  desired.pos._value.qz = servo->desired.pos._value.qz;
-
-  desired.vel._present = true;
-  desired.vel._value.vx =
-    - servo->raddes * servo->pulsedes * sin(servo->pulsedes * t);
-  desired.vel._value.vy =
-    + servo->raddes * servo->pulsedes * cos(servo->pulsedes * t);
-  desired.vel._value.vz =
-    0 * servo->raddes * servo->pulsedes * cos(servo->pulsedes * t);
-
-  desired.vel._value.wx = 0.;
-  desired.vel._value.wy = 0.;
-  desired.vel._value.wz = 0.;
-
-  desired.acc._present = true;
-  desired.acc._value.ax = - servo->raddes *
-    servo->pulsedes * servo->pulsedes * cos(servo->pulsedes * t);
-  desired.acc._value.ay = - servo->raddes *
-    servo->pulsedes * servo->pulsedes * sin(servo->pulsedes * t);
-  desired.acc._value.az = - 0 * servo->raddes *
-    servo->pulsedes * servo->pulsedes * sin(servo->pulsedes * t);
+  /* current state */
+  if (state->read(self) || !(state_data = state->data(self)))
+    goto output;
+  gettimeofday(&tv, NULL);
+  if (tv.tv_sec + 1e-6 * tv.tv_usec >
+      0.5 + state_data->ts.sec + 1e-9 * state_data->ts.nsec)
+    goto output;
 
 
   /* controller */
-  if (state->read(self)) return nhfc_e_input(self);
-  state_d = state->data(self);
-  if (!state_d) return nhfc_e_input(self);
+  s = nhfc_controller(servo, state_data, desired, log, &thrust, torque);
+  if (s) return nhfc_pause_control;
 
-  s = nhfc_controller(servo, state_d, &desired, &thrust, torque);
-  if (s) return nhfc_pause_step;
-
-
-  /* torque limitation */
-  tlimit = servo->vmax * servo->vmax * kf - thrust/4;
-  if (thrust/4 - servo->vmin * servo->vmin * kf < tlimit)
-    tlimit = thrust/4 - servo->vmin * servo->vmin * kf;
-  if (tlimit < 0.) tlimit = 0.;
-  tlimit = d * tlimit;
-
-  if (fabs(torque[0]) > tlimit) torque[0] = copysign(tlimit, torque[0]);
-  if (fabs(torque[1]) > tlimit) torque[1] = copysign(tlimit, torque[1]);
-  if (fabs(torque[2]) > 0.2) torque[2] = copysign(0.2, torque[2]);
+  /* thrust limitation */
+  if (thrust < 0.) thrust = 0.;
+  if (thrust > 4*servo->fmax) thrust = 4*servo->fmax;
 
   /* forces */
-  f[0] = thrust/4 - torque[1]/d/2. + torque[2]/c/4;
-  f[1] = thrust/4 + torque[1]/d/2. + torque[2]/c/4;
-  f[2] = thrust/4 - torque[0]/d/2. - torque[2]/c/4;
-  f[3] = thrust/4 + torque[0]/d/2. - torque[2]/c/4;
+  f[0] = thrust/4 - torque[1]/servo->d/2. + torque[2]/servo->c/4;
+  f[1] = thrust/4 + torque[0]/servo->d/2. - torque[2]/servo->c/4;
+  f[2] = thrust/4 + torque[1]/servo->d/2. + torque[2]/servo->c/4;
+  f[3] = thrust/4 - torque[0]/servo->d/2. - torque[2]/servo->c/4;
 
+  /* torque limitation */
+  if(f[0] < servo->fmin || f[0] > servo->fmax ||
+     f[1] < servo->fmin || f[1] > servo->fmax ||
+     f[2] < servo->fmin || f[2] > servo->fmax ||
+     f[3] < servo->fmin || f[3] > servo->fmax) {
+    double kmin = 0.;
+    double kmax = 1.;
+    double k;
+
+    while(kmax - kmin > 1e-3) {
+      k = (kmin + kmax)/2.;
+      f[0] = thrust/4 - k * torque[1]/servo->d/2. + k * torque[2]/servo->c/4;
+      f[1] = thrust/4 + k * torque[0]/servo->d/2. - k * torque[2]/servo->c/4;
+      f[2] = thrust/4 + k * torque[1]/servo->d/2. + k * torque[2]/servo->c/4;
+      f[3] = thrust/4 - k * torque[0]/servo->d/2. - k * torque[2]/servo->c/4;
+
+      if(f[0] < servo->fmin || f[0] > servo->fmax ||
+         f[1] < servo->fmin || f[1] > servo->fmax ||
+         f[2] < servo->fmin || f[2] > servo->fmax ||
+         f[3] < servo->fmin || f[3] > servo->fmax)
+        kmax = k;
+      else
+        kmin = k;
+    }
+
+    torque[0] *= k;
+    torque[1] *= k;
+    torque[2] *= k;
+  }
 
   /* output */
+output:
   input_data = propeller_input->data(self);
-  if (!input_data) return nhfc_e_input(self);
+  if (!input_data) return nhfc_pause_control;
+
+  if (state_data) {
+    input_data->ts = state_data->ts;
+  } else {
+    input_data->ts.sec = tv.tv_sec;
+    input_data->ts.nsec = tv.tv_usec * 1000;
+  }
+
+  input_data->w._length = 4;
+  for(i = 0; i < 4; i++)
+    input_data->w._buffer[i] = (f[i] > 0.) ? sqrt(f[i]/servo->kf) : 0.;
+
+  propeller_input->write(self);
+
+  return nhfc_pause_control;
+}
+
+
+/** Codel mk_main_stop of task main.
+ *
+ * Triggered by nhfc_stop.
+ * Yields to nhfc_ether.
+ */
+genom_event
+mk_main_stop(const nhfc_propeller_input *propeller_input,
+             genom_context self)
+{
+  or_rotorcraft_input *input_data;
+  struct timeval tv;
+  int i;
+
+  input_data = propeller_input->data(self);
+  if (!input_data) return nhfc_ether;
 
   gettimeofday(&tv, NULL);
   input_data->ts.sec = tv.tv_sec;
@@ -192,33 +185,89 @@ nhfc_servo_step(const nhfc_ids_servo_s *servo, const nhfc_state *state,
 
   input_data->w._length = 4;
   for(i = 0; i < 4; i++)
-    input_data->w._buffer[i] = (f[i] > 0.) ? sqrt(f[i]/kf) : 0.;
+    input_data->w._buffer[i] = 0.;
 
   propeller_input->write(self);
-
-#if 1
-  printf("v1: %2.3f v2: %2.3f v3: %2.3f v4: %2.3f\n",
-         input_data->w._buffer[0], input_data->w._buffer[1],
-         input_data->w._buffer[2], input_data->w._buffer[3]);
-#endif
-  fprintf(flog, "%f %f %f %f %f\n",
-          tv.tv_sec + 1e-6*tv.tv_usec,
-          input_data->w._buffer[0], input_data->w._buffer[1],
-          input_data->w._buffer[2], input_data->w._buffer[3]);
-
-  return nhfc_pause_step;
+  return nhfc_ether;
 }
 
-/** Codel mk_servo_stop of activity servo.
+
+/* --- Activity servo --------------------------------------------------- */
+
+/** Codel nhfc_servo_main of activity servo.
  *
- * Triggered by nhfc_stop.
+ * Triggered by nhfc_start.
+ * Yields to nhfc_pause_start, nhfc_ether.
+ * Throws nhfc_e_input.
+ */
+FILE *flog;
+
+genom_event
+nhfc_servo_main(const nhfc_reference *reference,
+                or_pose_estimator_state *desired, genom_context self)
+{
+  const or_pose_estimator_state *ref_data;
+
+  if (reference->read(self)) return nhfc_e_input(self);
+  ref_data = reference->data(self);
+  if (!ref_data) return nhfc_e_input(self);
+
+  *desired = *ref_data;
+  return nhfc_pause_start;
+}
+
+
+/* --- Activity set_current_position ------------------------------------ */
+
+/** Codel nhfc_set_current_position of activity set_current_position.
+ *
+ * Triggered by nhfc_start.
  * Yields to nhfc_ether.
  * Throws nhfc_e_input.
  */
 genom_event
-mk_servo_stop(const nhfc_propeller_input *propeller_input,
-              genom_context self)
+nhfc_set_current_position(const nhfc_state *state,
+                          or_pose_estimator_state *desired,
+                          genom_context self)
 {
-  fclose(flog);
+  const or_pose_estimator_state *state_data;
+  double qw, qx, qy, qz;
+  double yaw;
+
+  if (state->read(self)) return nhfc_e_input(self);
+  state_data = state->data(self);
+  if (!state_data) return nhfc_e_input(self);
+  if (!state_data->pos._present) return nhfc_e_input(self);
+
+  qw = state_data->pos._value.qw;
+  qx = state_data->pos._value.qx;
+  qy = state_data->pos._value.qy;
+  qz = state_data->pos._value.qz;
+  yaw = atan2(2 * (qw*qz + qx*qy), 1 - 2 * (qy*qy + qz*qz));
+
+  desired->ts = state_data->ts;
+
+  desired->pos._present = true;
+  desired->pos._value.x = state_data->pos._value.x;
+  desired->pos._value.y = state_data->pos._value.y;
+  desired->pos._value.z = state_data->pos._value.z;
+  desired->pos._value.qw = cos(yaw/2.);
+  desired->pos._value.qx = 0.;
+  desired->pos._value.qy = 0.;
+  desired->pos._value.qz = sin(yaw/2.);
+
+  desired->vel._present = true;
+  desired->vel._value.vx = 0.;
+  desired->vel._value.vy = 0.;
+  desired->vel._value.vz = 0.;
+  desired->vel._value.wx = 0.;
+  desired->vel._value.wy = 0.;
+  desired->vel._value.wz = 0.;
+
+  desired->acc._present = true;
+  desired->acc._value.ax = 0.;
+  desired->acc._value.ay = 0.;
+  desired->acc._value.az = 0.;
+
   return nhfc_ether;
 }
