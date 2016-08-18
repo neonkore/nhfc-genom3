@@ -38,6 +38,7 @@ component nhfc {
 
   ids {
     struct servo_s {
+      struct sat_s { double x, v; } sat;
       struct gain_s { double Kx, Kq, Kv, Kw; } gain;
       double mass;
 
@@ -55,9 +56,18 @@ component nhfc {
     log_s log;
   };
 
+  attribute set_saturation(in servo.sat);
   attribute set_servo_gain(in servo.gain);
   attribute set_mass(in servo.mass);
+  attribute set_vlimit(in servo.vmin, in servo.vmax) {
+    validate nhfc_set_vlimit(local in vmin, local in vmax,
+                             inout servo);
+  };
+  attribute set_servo_geom(in servo.d, in servo.kf, in servo.c) {
+    validate nhfc_set_servo_geom(local in kf, inout servo);
+  };
 
+  attribute get_servo_parameters(out servo);
   attribute get_desired(out desired);
 
   task main {

@@ -24,6 +24,40 @@
 #include "codels.h"
 
 
+/* --- Attribute set_vlimit --------------------------------------------- */
+
+/** Validation codel nhfc_set_vlimit of attribute set_vlimit.
+ *
+ * Returns genom_ok.
+ * Throws .
+ */
+genom_event
+nhfc_set_vlimit(double vmin, double vmax, nhfc_ids_servo_s *servo,
+                genom_context self)
+{
+  servo->fmax = vmax * vmax * servo->kf;
+  servo->fmin = vmin * vmin * servo->kf;
+  return genom_ok;
+}
+
+
+/* --- Attribute set_servo_geom ----------------------------------------- */
+
+/** Validation codel nhfc_set_servo_geom of attribute set_servo_geom.
+ *
+ * Returns genom_ok.
+ * Throws .
+ */
+genom_event
+nhfc_set_servo_geom(double kf, nhfc_ids_servo_s *servo,
+                    genom_context self)
+{
+  servo->fmax = servo->vmax * servo->vmax * kf;
+  servo->fmin = servo->vmin * servo->vmin * kf;
+  return genom_ok;
+}
+
+
 /* --- Function set_state ----------------------------------------------- */
 
 /** Codel nhfc_set_state of function set_state.

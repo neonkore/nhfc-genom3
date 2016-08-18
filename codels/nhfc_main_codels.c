@@ -36,6 +36,9 @@
 genom_event
 nhfc_main_start(nhfc_ids *ids, genom_context self)
 {
+  ids->servo.sat.x = .1;
+  ids->servo.sat.v = .1;
+
   ids->servo.gain.Kx = 25.;
   ids->servo.gain.Kq = 3.;
   ids->servo.gain.Kv = 12.;
@@ -50,8 +53,7 @@ nhfc_main_start(nhfc_ids *ids, genom_context self)
   ids->servo.kf = 6.5e-4;
   ids->servo.c = 0.0154;
 
-  ids->servo.fmax = ids->servo.vmax * ids->servo.vmax * ids->servo.kf;
-  ids->servo.fmin = ids->servo.vmin * ids->servo.vmin * ids->servo.kf;
+  nhfc_set_vlimit(ids->servo.vmin, ids->servo.vmax, &ids->servo, self);
 
   ids->desired.pos._present = false;
   ids->desired.pos_cov._present = false;

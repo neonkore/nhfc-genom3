@@ -136,7 +136,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   if (desired->pos._present) {
     ex = x - xd;
     for(i = 0; i < 2; i++)
-      if (fabs(ex(i)) > 0.15) ex(i) = copysign(0.15, ex(i));
+      if (fabs(ex(i)) > servo->sat.x) ex(i) = copysign(servo->sat.x, ex(i));
   } else
     ex << 0., 0., 0.;
 
@@ -144,7 +144,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   if (desired->vel._present) {
     ev = v - vd;
     for(i = 0; i < 2; i++)
-      if (fabs(ev(i)) > 0.15) ev(i) = copysign(0.15, ev(i));
+      if (fabs(ev(i)) > servo->sat.v) ev(i) = copysign(servo->sat.v, ev(i));
   } else
     ev << 0., 0., 0.;
 
