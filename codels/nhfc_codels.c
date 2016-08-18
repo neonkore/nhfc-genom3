@@ -16,4 +16,47 @@
  */
 #include "acnhfc.h"
 
+#include <sys/time.h>
+#include <math.h>
+#include <stdio.h>
+
 #include "nhfc_c_types.h"
+#include "codels.h"
+
+
+/* --- Function log ----------------------------------------------------- */
+
+/** Codel nhfc_log of function log.
+ *
+ * Returns genom_ok.
+ * Throws nhfc_e_sys.
+ */
+genom_event
+nhfc_log(const char path[64], nhfc_log_s **log, genom_context self)
+{
+  FILE *f;
+
+  f = fopen(path, "w");
+  if (!f) return nhfc_e_sys_error(path, self);
+  fprintf(f, nhfc_log_header_fmt "\n");
+
+  if ((*log)->f) fclose((*log)->f);
+  (*log)->f = f;
+  return genom_ok;
+}
+
+
+/* --- Function log_stop ------------------------------------------------ */
+
+/** Codel nhfc_log_stop of function log_stop.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+nhfc_log_stop(nhfc_log_s **log, genom_context self)
+{
+  if ((*log)->f) fclose((*log)->f);
+  (*log)->f = NULL;
+
+  return genom_ok;
+}

@@ -19,6 +19,7 @@
 #include <sys/time.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "nhfc_c_types.h"
 #include "codels.h"

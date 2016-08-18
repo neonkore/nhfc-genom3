@@ -32,6 +32,9 @@ component nhfc {
   port in	or_pose_estimator::state reference;
 
   exception e_input;
+  exception e_sys { short code; string<128> what; };
+
+  native log_s;
 
   ids {
     struct servo_s {
@@ -43,6 +46,11 @@ component nhfc {
 
       double vmin, vmax;
     } servo;
+
+    or_pose_estimator::state desired;
+
+    /* logging */
+    log_s log;
   };
 
   attribute set_servo_gain(in servo.gain);
@@ -78,5 +86,22 @@ component nhfc {
   function stop() {
     doc		"XXX Servo";
     interrupt servo;
+  };
+
+
+  /* --- logging ----------------------------------------------------------- */
+
+  function log(in string<64> path = "/tmp/nhfc.log": "Log file name") {
+    doc		"Log state";
+
+    codel nhfc_log(in path, inout log);
+
+    throw e_sys;
+  };
+
+  function log_stop() {
+    doc		"Stop logging";
+
+    codel nhfc_log_stop(out log);
   };
 };

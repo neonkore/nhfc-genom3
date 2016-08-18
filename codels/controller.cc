@@ -22,6 +22,7 @@
  *                                           Anthony Mallet on Tue Mar 22 2016
  */
 #include <cmath>
+#include <cstdio>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -40,6 +41,7 @@ int
 nhfc_controller(const nhfc_ids_servo_s *servo,
                 const or_pose_estimator_state *state,
                 const or_pose_estimator_state *desired,
+                const nhfc_log_s *log,
                 double *thrust, double torque[3])
 {
   Eigen::Matrix3d Rd;
@@ -170,10 +172,33 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   /* angular velocity error */
   ew = R.transpose() * (w - wd);
 
-
   /* output */
   *thrust = f.dot(R.col(2));
   t = - servo->gain.Kq * eR - servo->gain.Kw * ew;
+
+
+  /* logging */
+  if (log->f) {
+    double d;
+    double roll, pitch, yaw;
+
+    d = hypot(Rd(0,0), Rd(1,0));
+    if (fabs(d) > 1e-10) {
+      yaw = atan2(Rd(1,0), Rd(0,0));
+      roll = atan2(Rd(2,1), Rd(2,2));
+    } else {
+      yaw = atan2(-Rd(0,1), Rd(1,1));
+      roll = 0.;
+    }
+    pitch = atan2(-Rd(2,0), d);
+
+    fprintf(
+      log->f, nhfc_log_fmt "\n",
+      state->ts.sec, state->ts.nsec,
+      f(0), f(1), f(2), t(0), t(1), t(2), roll, pitch, yaw,
+      ex(0), ex(1), ex(2), ev(0), ev(1), ev(2),
+      eR(0), eR(1), eR(2), ew(0), ew(1), ew(2));
+  }
 
   return 0;
 }
