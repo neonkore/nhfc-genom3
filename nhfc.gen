@@ -39,7 +39,9 @@ component nhfc {
   ids {
     struct servo_s {
       struct sat_s { double x, v; } sat;
-      struct gain_s { double Kx, Kq, Kv, Kw; } gain;
+      struct gain_s {
+        double Kpxy, Kpz, Kqxy, Kqz, Kvxy, Kvz, Kwxy, Kwz;
+      } gain;
       double mass;
 
       double vmin, vmax;

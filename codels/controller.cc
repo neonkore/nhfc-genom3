@@ -59,6 +59,13 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   Eigen::Matrix3d E;
   int i;
 
+  /* gains */
+  const Eigen::Array3d Kp(servo->gain.Kpxy, servo->gain.Kpxy, servo->gain.Kpz);
+  const Eigen::Array3d Kv(servo->gain.Kvxy, servo->gain.Kvxy, servo->gain.Kvz);
+  const Eigen::Array3d Kq(servo->gain.Kqxy, servo->gain.Kqxy, servo->gain.Kqz);
+  const Eigen::Array3d Kw(servo->gain.Kwxy, servo->gain.Kwxy, servo->gain.Kwz);
+
+
   /* desired state */
   if (desired->pos._present) {
     xd <<
@@ -151,8 +158,9 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
   /* desired orientation matrix */
   f =
-    - servo->gain.Kx * ex - servo->gain.Kv * ev
-    + servo->mass * (Eigen::Vector3d(0, 0, 9.81) + ad);
+    - Kp * ex.array() - Kv * ev.array()
+    + servo->mass * (Eigen::Vector3d(0, 0, 9.81) + ad).array();
+
   Rd.col(2) = f.normalized();
 
   Rd.col(1) = Rd.col(2).cross(qd.matrix().col(0));
@@ -174,7 +182,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
   /* output */
   *thrust = f.dot(R.col(2));
-  t = - servo->gain.Kq * eR - servo->gain.Kw * ew;
+  t = - Kq * eR.array() - Kw * ew.array();
 
 
   /* logging */

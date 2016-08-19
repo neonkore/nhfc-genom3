@@ -39,10 +39,14 @@ nhfc_main_start(nhfc_ids *ids, genom_context self)
   ids->servo.sat.x = .1;
   ids->servo.sat.v = .1;
 
-  ids->servo.gain.Kx = 25.;
-  ids->servo.gain.Kq = 3.;
-  ids->servo.gain.Kv = 12.;
-  ids->servo.gain.Kw = 0.3;
+  ids->servo.gain.Kpxy = 25.;
+  ids->servo.gain.Kpz = 25.;
+  ids->servo.gain.Kqxy = 3.;
+  ids->servo.gain.Kqz = .3;
+  ids->servo.gain.Kvxy = 12.;
+  ids->servo.gain.Kvz = 12.;
+  ids->servo.gain.Kwxy = .3;
+  ids->servo.gain.Kwz = .03;
 
   ids->servo.mass = 1.0;
 
