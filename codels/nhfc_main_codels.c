@@ -53,7 +53,7 @@ nhfc_main_start(nhfc_ids *ids, genom_context self)
   ids->servo.vmax = 90.;
   ids->servo.vmin = 16.;
 
-  ids->servo.d = 0.25;
+  ids->servo.d = 0.23;
   ids->servo.kf = 6.5e-4;
   ids->servo.c = 0.0154;
 
