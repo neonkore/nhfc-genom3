@@ -31,7 +31,7 @@
 /** Codel nhfc_main_start of task main.
  *
  * Triggered by nhfc_start.
- * Yields to nhfc_control.
+ * Yields to nhfc_init.
  */
 genom_event
 nhfc_main_start(nhfc_ids *ids, genom_context self)
@@ -71,18 +71,53 @@ nhfc_main_start(nhfc_ids *ids, genom_context self)
   if (!ids->log) abort();
   ids->log->f = NULL;
 
-  return nhfc_control;
+  return nhfc_init;
+}
+
+
+/** Codel nhfc_main_init of task main.
+ *
+ * Triggered by nhfc_init.
+ * Yields to nhfc_pause_init, nhfc_control.
+ */
+genom_event
+nhfc_main_init(const or_pose_estimator_state *desired,
+               const nhfc_propeller_input *propeller_input,
+               genom_context self)
+{
+  or_rotorcraft_input *input_data;
+  struct timeval tv;
+  int i;
+
+  /* switch to servo mode upon reception of the first valid position */
+  if (desired->pos._present) return nhfc_control;
+
+  /* output zero (minimal) velocity */
+  input_data = propeller_input->data(self);
+  if (!input_data) return nhfc_pause_init;
+
+  gettimeofday(&tv, NULL);
+  input_data->ts.sec = tv.tv_sec;
+  input_data->ts.nsec = tv.tv_usec * 1000;
+
+  input_data->w._length = 4;
+  for(i = 0; i < 4; i++)
+    input_data->w._buffer[i] = 0.;
+
+  propeller_input->write(self);
+
+  return nhfc_pause_init;
 }
 
 
 /** Codel nhfc_main_control of task main.
  *
  * Triggered by nhfc_control.
- * Yields to nhfc_pause_control, nhfc_stop.
+ * Yields to nhfc_pause_control.
  */
 genom_event
 nhfc_main_control(const nhfc_ids_servo_s *servo,
-                  const or_pose_estimator_state *desired,
+                  or_pose_estimator_state *desired,
                   const nhfc_state *state, const nhfc_log_s *log,
                   const nhfc_propeller_input *propeller_input,
                   genom_context self)
@@ -102,6 +137,11 @@ nhfc_main_control(const nhfc_ids_servo_s *servo,
       0.5 + state_data->ts.sec + 1e-9 * state_data->ts.nsec)
     goto output;
 
+  if (tv.tv_sec + 1e-6 * tv.tv_usec >
+      0.5 + desired->ts.sec + 1e-9 * desired->ts.nsec) {
+    desired->vel._present = false;
+    desired->acc._present = false;
+  }
 
   /* controller */
   s = nhfc_controller(servo, state_data, desired, log, &thrust, torque);
@@ -206,8 +246,6 @@ mk_main_stop(const nhfc_propeller_input *propeller_input,
  * Yields to nhfc_pause_start, nhfc_ether.
  * Throws nhfc_e_input.
  */
-FILE *flog;
-
 genom_event
 nhfc_servo_main(const nhfc_reference *reference,
                 or_pose_estimator_state *desired, genom_context self)
@@ -219,6 +257,7 @@ nhfc_servo_main(const nhfc_reference *reference,
   if (!ref_data) return nhfc_e_input(self);
 
   *desired = *ref_data;
+
   return nhfc_pause_start;
 }
 

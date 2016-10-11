@@ -76,10 +76,12 @@ component nhfc {
     period 1ms;
 
     codel<start> nhfc_main_start(out ::ids)
-      yield control;
-    codel<control> nhfc_main_control(in servo, in desired, in state,
+      yield init;
+    codel<init> nhfc_main_init(in desired, out propeller_input)
+      yield pause::init, control;
+    codel<control> nhfc_main_control(in servo, inout desired, in state,
                                      in log, out propeller_input)
-      yield pause::control, stop;
+      yield pause::control;
     codel<stop> mk_main_stop(out propeller_input)
       yield ether;
   };
