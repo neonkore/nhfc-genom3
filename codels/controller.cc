@@ -102,9 +102,11 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
       state->pos_cov._present &&
       state->pos_cov._value.cov[0] < 0.1 &&
       state->pos_cov._value.cov[2] < 0.1 &&
-      state->pos_cov._value.cov[5] < 0.1)
+      state->pos_cov._value.cov[5] < 0.1) {
     x << state->pos._value.x, state->pos._value.y, state->pos._value.z;
-  else
+    if (!desired->pos._present)
+      xd = x + Eigen::Vector3d(0, 0, -5e-2);
+  } else
     x = xd;
 
   if (state->pos._present && !std::isnan(state->pos._value.qw) &&
@@ -112,11 +114,13 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
       state->pos_cov._value.cov[9] < 0.1 &&
       state->pos_cov._value.cov[14] < 0.1 &&
       state->pos_cov._value.cov[20] < 0.1 &&
-      state->pos_cov._value.cov[27] < 0.1)
+      state->pos_cov._value.cov[27] < 0.1) {
     q.coeffs() <<
       state->pos._value.qx, state->pos._value.qy, state->pos._value.qz,
       state->pos._value.qw;
-  else
+    if (!desired->pos._present)
+      qd = q;
+  } else
     q = qd;
   R = q.matrix();
 
@@ -140,20 +144,14 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
 
   /* position error */
-  if (desired->pos._present) {
-    ex = x - xd;
-    for(i = 0; i < 2; i++)
-      if (fabs(ex(i)) > servo->sat.x) ex(i) = copysign(servo->sat.x, ex(i));
-  } else
-    ex << 0., 0., 0.;
+  ex = x - xd;
+  for(i = 0; i < 3; i++)
+    if (fabs(ex(i)) > servo->sat.x) ex(i) = copysign(servo->sat.x, ex(i));
 
   /* velocity error */
-  if (desired->vel._present) {
-    ev = v - vd;
-    for(i = 0; i < 2; i++)
-      if (fabs(ev(i)) > servo->sat.v) ev(i) = copysign(servo->sat.v, ev(i));
-  } else
-    ev << 0., 0., 0.;
+  ev = v - vd;
+  for(i = 0; i < 3; i++)
+    if (fabs(ev(i)) > servo->sat.v) ev(i) = copysign(servo->sat.v, ev(i));
 
 
   /* desired orientation matrix */
