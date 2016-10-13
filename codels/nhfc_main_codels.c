@@ -27,6 +27,7 @@
 
 /* --- Task main -------------------------------------------------------- */
 
+static double nhfc_scale;
 
 /** Codel nhfc_main_start of task main.
  *
@@ -36,28 +37,21 @@
 genom_event
 nhfc_main_start(nhfc_ids *ids, genom_context self)
 {
-  ids->servo.sat.x = .1;
-  ids->servo.sat.v = .1;
+  ids->servo = (nhfc_ids_servo_s){
+    .sat = { .x = 0.1, .v = 0.1 },
+    .gain = {
+      .Kpxy = 14., .Kvxy = 7., .Kpz = 20., .Kvz = 10.,
+      .Kqxy = 2.3, .Kwxy = .23, .Kqz = .2, .Kwz = .02,
+    },
+    .mass = 1.0,
+    .vmax = 90., .vmin = 16.,
+    .d = 0.23, .kf = 6.5e-4,.c = 0.0154,
 
-  ids->servo.gain.Kpxy = 14.;
-  ids->servo.gain.Kpz = 20.;
-  ids->servo.gain.Kqxy = 2.3;
-  ids->servo.gain.Kqz = .2;
-  ids->servo.gain.Kvxy = 7.;
-  ids->servo.gain.Kvz = 10.;
-  ids->servo.gain.Kwxy = .23;
-  ids->servo.gain.Kwz = .02;
-
-  ids->servo.mass = 1.0;
-
-  ids->servo.vmax = 90.;
-  ids->servo.vmin = 16.;
-
-  ids->servo.d = 0.23;
-  ids->servo.kf = 6.5e-4;
-  ids->servo.c = 0.0154;
+    .ramp = 3
+  };
 
   nhfc_set_vlimit(ids->servo.vmin, ids->servo.vmax, &ids->servo, self);
+  nhfc_scale = 0.;
 
   ids->desired.pos._present = false;
   ids->desired.pos_cov._present = false;
@@ -148,7 +142,7 @@ nhfc_main_control(const nhfc_ids_servo_s *servo,
   if (s) return nhfc_pause_control;
 
   /* thrust limitation */
-  if (thrust < 0.) thrust = 0.;
+  if (thrust < 4*servo->fmin) thrust = 4*servo->fmin;
   if (thrust > 4*servo->fmax) thrust = 4*servo->fmax;
 
   /* forces */
@@ -202,6 +196,13 @@ output:
   input_data->w._length = 4;
   for(i = 0; i < 4; i++)
     input_data->w._buffer[i] = (f[i] > 0.) ? sqrt(f[i]/servo->kf) : 0.;
+
+  if (nhfc_scale < 1.) {
+    for(i = 0; i < input_data->w._length; i++)
+      input_data->w._buffer[i] *= nhfc_scale;
+
+    nhfc_scale += 1e-3 * nhfc_control_period_ms / servo->ramp;
+  }
 
   propeller_input->write(self);
 
