@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 LAAS/CNRS
+ * Copyright (c) 2015-2017 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -33,7 +33,7 @@
  */
 genom_event
 nhfc_set_vlimit(double vmin, double vmax, nhfc_ids_servo_s *servo,
-                genom_context self)
+                const genom_context self)
 {
   servo->fmax = vmax * vmax * servo->kf;
   servo->fmin = vmin * vmin * servo->kf;
@@ -50,7 +50,7 @@ nhfc_set_vlimit(double vmin, double vmax, nhfc_ids_servo_s *servo,
  */
 genom_event
 nhfc_set_servo_geom(double kf, nhfc_ids_servo_s *servo,
-                    genom_context self)
+                    const genom_context self)
 {
   servo->fmax = servo->vmax * servo->vmax * kf;
   servo->fmin = servo->vmin * servo->vmin * kf;
@@ -67,7 +67,7 @@ nhfc_set_servo_geom(double kf, nhfc_ids_servo_s *servo,
 genom_event
 nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
                const or_t3d_acc *acc, or_pose_estimator_state *desired,
-               genom_context self)
+               const genom_context self)
 {
   struct timeval tv;
 
@@ -109,7 +109,7 @@ nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
 genom_event
 nhfc_set_position(double x, double y, double z, double yaw,
                   or_pose_estimator_state *desired,
-                  genom_context self)
+                  const genom_context self)
 {
   struct timeval tv;
 
@@ -151,7 +151,8 @@ nhfc_set_position(double x, double y, double z, double yaw,
  * Throws nhfc_e_sys.
  */
 genom_event
-nhfc_log(const char path[64], nhfc_log_s **log, genom_context self)
+nhfc_log(const char path[64], nhfc_log_s **log,
+         const genom_context self)
 {
   FILE *f;
 
@@ -172,7 +173,7 @@ nhfc_log(const char path[64], nhfc_log_s **log, genom_context self)
  * Returns genom_ok.
  */
 genom_event
-nhfc_log_stop(nhfc_log_s **log, genom_context self)
+nhfc_log_stop(nhfc_log_s **log, const genom_context self)
 {
   if ((*log)->f) fclose((*log)->f);
   (*log)->f = NULL;

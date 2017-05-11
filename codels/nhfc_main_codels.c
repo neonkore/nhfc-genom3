@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 LAAS/CNRS
+ * Copyright (c) 2015-2017 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -35,7 +35,7 @@ static double nhfc_scale;
  * Yields to nhfc_init.
  */
 genom_event
-nhfc_main_start(nhfc_ids *ids, genom_context self)
+nhfc_main_start(nhfc_ids *ids, const genom_context self)
 {
   ids->servo = (nhfc_ids_servo_s){
     .sat = { .x = 0.20, .v = 0.1 },
@@ -249,7 +249,8 @@ mk_main_stop(const nhfc_propeller_input *propeller_input,
  */
 genom_event
 nhfc_servo_main(const nhfc_reference *reference,
-                or_pose_estimator_state *desired, genom_context self)
+                or_pose_estimator_state *desired,
+                const genom_context self)
 {
   const or_pose_estimator_state *ref_data;
 
@@ -274,7 +275,7 @@ nhfc_servo_main(const nhfc_reference *reference,
 genom_event
 nhfc_set_current_position(const nhfc_state *state,
                           or_pose_estimator_state *desired,
-                          genom_context self)
+                          const genom_context self)
 {
   const or_pose_estimator_state *state_data;
   double qw, qx, qy, qz;
