@@ -76,8 +76,8 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
  */
 genom_event
 nhfc_main_init(const or_pose_estimator_state *desired,
-               const nhfc_propeller_input *propeller_input,
-               genom_context self)
+               const nhfc_rotor_input *rotor_input,
+               const genom_context self)
 {
   or_rotorcraft_input *input_data;
   struct timeval tv;
@@ -87,18 +87,19 @@ nhfc_main_init(const or_pose_estimator_state *desired,
   if (desired->pos._present) return nhfc_control;
 
   /* output zero (minimal) velocity */
-  input_data = propeller_input->data(self);
+  input_data = rotor_input->data(self);
   if (!input_data) return nhfc_pause_init;
 
   gettimeofday(&tv, NULL);
   input_data->ts.sec = tv.tv_sec;
   input_data->ts.nsec = tv.tv_usec * 1000;
+  input_data->control = or_rotorcraft_velocity;
 
-  input_data->w._length = 4;
+  input_data->desired._length = 4;
   for(i = 0; i < 4; i++)
-    input_data->w._buffer[i] = 0.;
+    input_data->desired._buffer[i] = 0.;
 
-  propeller_input->write(self);
+  rotor_input->write(self);
 
   return nhfc_pause_init;
 }
@@ -113,8 +114,8 @@ genom_event
 nhfc_main_control(const nhfc_ids_servo_s *servo,
                   or_pose_estimator_state *desired,
                   const nhfc_state *state, const nhfc_log_s *log,
-                  const nhfc_propeller_input *propeller_input,
-                  genom_context self)
+                  const nhfc_rotor_input *rotor_input,
+                  const genom_context self)
 {
   const or_pose_estimator_state *state_data;
   or_rotorcraft_input *input_data;
@@ -183,7 +184,7 @@ nhfc_main_control(const nhfc_ids_servo_s *servo,
 
   /* output */
 output:
-  input_data = propeller_input->data(self);
+  input_data = rotor_input->data(self);
   if (!input_data) return nhfc_pause_control;
 
   if (state_data) {
@@ -192,19 +193,20 @@ output:
     input_data->ts.sec = tv.tv_sec;
     input_data->ts.nsec = tv.tv_usec * 1000;
   }
+  input_data->control = or_rotorcraft_velocity;
 
-  input_data->w._length = 4;
+  input_data->desired._length = 4;
   for(i = 0; i < 4; i++)
-    input_data->w._buffer[i] = (f[i] > 0.) ? sqrt(f[i]/servo->kf) : 0.;
+    input_data->desired._buffer[i] = (f[i] > 0.) ? sqrt(f[i]/servo->kf) : 0.;
 
   if (nhfc_scale < 1.) {
-    for(i = 0; i < input_data->w._length; i++)
-      input_data->w._buffer[i] *= nhfc_scale;
+    for(i = 0; i < input_data->desired._length; i++)
+      input_data->desired._buffer[i] *= nhfc_scale;
 
     nhfc_scale += 1e-3 * nhfc_control_period_ms / servo->ramp;
   }
 
-  propeller_input->write(self);
+  rotor_input->write(self);
 
   return nhfc_pause_control;
 }
@@ -216,25 +218,26 @@ output:
  * Yields to nhfc_ether.
  */
 genom_event
-mk_main_stop(const nhfc_propeller_input *propeller_input,
-             genom_context self)
+mk_main_stop(const nhfc_rotor_input *rotor_input,
+             const genom_context self)
 {
   or_rotorcraft_input *input_data;
   struct timeval tv;
   int i;
 
-  input_data = propeller_input->data(self);
+  input_data = rotor_input->data(self);
   if (!input_data) return nhfc_ether;
 
   gettimeofday(&tv, NULL);
   input_data->ts.sec = tv.tv_sec;
   input_data->ts.nsec = tv.tv_usec * 1000;
+  input_data->control = or_rotorcraft_velocity;
 
-  input_data->w._length = 4;
+  input_data->desired._length = 4;
   for(i = 0; i < 4; i++)
-    input_data->w._buffer[i] = 0.;
+    input_data->desired._buffer[i] = 0.;
 
-  propeller_input->write(self);
+  rotor_input->write(self);
   return nhfc_ether;
 }
 

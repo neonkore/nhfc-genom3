@@ -14,7 +14,7 @@
  *
  *					Anthony Mallet on Tue Aug 11 2015
  */
-#pragma require "openrobots-idl >= 1.2"
+#pragma require "openrobots-idl >= 1.4"
 
 #include "or/pose/pose_estimator.gen"
 #include "or/robot/rotorcraft.gen"
@@ -81,12 +81,12 @@ component nhfc {
 
     codel<start> nhfc_main_start(out ::ids)
       yield init;
-    codel<init> nhfc_main_init(in desired, out propeller_input)
+    codel<init> nhfc_main_init(in desired, out rotor_input)
       yield pause::init, control;
     codel<control> nhfc_main_control(in servo, inout desired, in state,
-                                     in log, out propeller_input)
+                                     in log, out rotor_input)
       yield pause::control;
-    codel<stop> mk_main_stop(out propeller_input)
+    codel<stop> mk_main_stop(out rotor_input)
       yield ether;
   };
 
