@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 LAAS/CNRS
+ * Copyright (c) 2016-2017 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution  and  use  in  source  and binary  forms,  with  or  without
@@ -53,7 +53,7 @@ nhfc_e_sys_error(const char *s, genom_context self)
     strcpy(d.what + l, ": ");
     l += 2;
   }
-  if (strerror_r(d.code, d.what + l, sizeof(d.what) - l)) /* ignore error*/;
+  if (strerror_r(d.code, d.what + l, sizeof(d.what) - l)) { /* ignore error*/; }
   return nhfc_e_sys(&d, self);
 }
 

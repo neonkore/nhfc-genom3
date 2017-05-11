@@ -122,7 +122,8 @@ nhfc_main_control(const nhfc_ids_servo_s *servo,
   double thrust, torque[3];
   struct timeval tv;
   double f[4] = { 0., 0., 0., 0. };
-  int i, s;
+  size_t i;
+  int s;
 
   /* current state */
   if (state->read(self) || !(state_data = state->data(self)))

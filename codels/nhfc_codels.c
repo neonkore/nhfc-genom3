@@ -35,6 +35,8 @@ genom_event
 nhfc_set_vlimit(double vmin, double vmax, nhfc_ids_servo_s *servo,
                 const genom_context self)
 {
+  (void)self; /* -Wunused-parameter */
+
   servo->fmax = vmax * vmax * servo->kf;
   servo->fmin = vmin * vmin * servo->kf;
   return genom_ok;
@@ -52,6 +54,8 @@ genom_event
 nhfc_set_servo_geom(double kf, nhfc_ids_servo_s *servo,
                     const genom_context self)
 {
+  (void)self; /* -Wunused-parameter */
+
   servo->fmax = servo->vmax * servo->vmax * kf;
   servo->fmin = servo->vmin * servo->vmin * kf;
   return genom_ok;
@@ -70,6 +74,7 @@ nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
                const genom_context self)
 {
   struct timeval tv;
+  (void)self; /* -Wunused-parameter */
 
   gettimeofday(&tv, NULL);
   desired->ts.sec = tv.tv_sec;
@@ -112,6 +117,7 @@ nhfc_set_position(double x, double y, double z, double yaw,
                   const genom_context self)
 {
   struct timeval tv;
+  (void)self; /* -Wunused-parameter */
 
   gettimeofday(&tv, NULL);
   desired->ts.sec = tv.tv_sec;
@@ -175,6 +181,8 @@ nhfc_log(const char path[64], nhfc_log_s **log,
 genom_event
 nhfc_log_stop(nhfc_log_s **log, const genom_context self)
 {
+  (void)self; /* -Wunused-parameter */
+
   if ((*log)->f) fclose((*log)->f);
   (*log)->f = NULL;
 
