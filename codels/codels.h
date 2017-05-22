@@ -62,10 +62,13 @@ struct nhfc_log_s {
 
 # define nhfc_logfmt	" %e "
 # define nhfc_log_header_fmt                                            \
-  "ts fx fy fz tx ty tz roll pitch yaw "                                \
+  "ts thrust fx fy fz tx ty tz "                                        \
+  "xd yd zd rolld pitchd yawd vxd vyd vzd wxd wyd wzd axd ayd azd "     \
   "e_x e_y e_z e_vx e_vy e_vz e_rx e_ry e_rz e_wx e_wy e_wz"
 # define nhfc_log_fmt                                                   \
-  "%d.%09d "                                                            \
+  "%d.%09d " nhfc_logfmt                                                \
+  nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \
+  nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \
   nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \
   nhfc_logfmt nhfc_logfmt nhfc_logfmt                                   \
   nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \

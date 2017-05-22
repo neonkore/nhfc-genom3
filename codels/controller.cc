@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 LAAS/CNRS
+ * Copyright (c) 2016-2017 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution  and  use  in  source  and binary  forms,  with  or  without
@@ -200,8 +200,11 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
     fprintf(
       log->f, nhfc_log_fmt "\n",
-      state->ts.sec, state->ts.nsec,
-      f(0), f(1), f(2), t(0), t(1), t(2), roll, pitch, yaw,
+      state->ts.sec, state->ts.nsec, *thrust,
+      f(0), f(1), f(2), t(0), t(1), t(2),
+      xd(0), xd(1), xd(2), roll, pitch, yaw,
+      vd(0), vd(1), vd(2), wd(0), wd(1), wd(2),
+      ad(0), ad(1), ad(2),
       ex(0), ex(1), ex(2), ev(0), ev(1), ev(2),
       eR(0), eR(1), eR(2), ew(0), ew(1), ew(2));
   }
