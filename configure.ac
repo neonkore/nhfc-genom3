@@ -18,7 +18,7 @@ dnl
 
 AC_PREREQ(2.59)
 
-AC_INIT([nhfc-genom3],[1.2],[openrobots@laas.fr])
+AC_INIT([nhfc-genom3],[1.3],[openrobots@laas.fr])
 AC_CONFIG_MACRO_DIR([autoconf])
 AC_CONFIG_AUX_DIR([autoconf])
 AC_CONFIG_HEADERS([autoconf/acnhfc.h])
@@ -33,7 +33,7 @@ AC_PROG_CXX
 
 dnl External packages
 PKG_CHECK_MODULES(requires, [
-  openrobots-idl >= 1.2
+  openrobots-idl >= 1.4
   genom3 >= 2.99.26
   eigen3
 ])
