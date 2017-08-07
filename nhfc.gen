@@ -145,6 +145,9 @@ component nhfc {
 
   function stop() {
     doc		"Stop tracking a desired position";
+
+    codel nhfc_servo_stop(out desired);
+
     interrupt servo;
   };
 

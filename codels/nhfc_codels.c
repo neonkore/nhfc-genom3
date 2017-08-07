@@ -168,6 +168,31 @@ nhfc_set_position(double x, double y, double z, double yaw,
 }
 
 
+/* --- Function stop ---------------------------------------------------- */
+
+/** Codel nhfc_servo_stop of function stop.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+nhfc_servo_stop(or_pose_estimator_state *desired,
+                const genom_context self)
+{
+  struct timeval tv;
+  (void)self; /* -Wunused-parameter */
+
+  gettimeofday(&tv, NULL);
+  desired->ts.sec = tv.tv_sec;
+  desired->ts.nsec = tv.tv_usec * 1000.;
+
+  desired->pos._present = false;
+  desired->vel._present = false;
+  desired->acc._present = false;
+
+  return genom_ok;
+}
+
+
 /* --- Function log ----------------------------------------------------- */
 
 /** Codel nhfc_log of function log.
