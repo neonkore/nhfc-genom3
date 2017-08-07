@@ -57,6 +57,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   Eigen::Vector3d f;
   Eigen::Map<Eigen::Matrix<double, 3, 1> > t(torque);
   Eigen::Matrix3d E;
+  bool statex, statev;
   int i;
 
   /* gains */
@@ -100,21 +101,24 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   /* current state */
   if (state->pos._present && !std::isnan(state->pos._value.x) &&
       state->pos_cov._present &&
-      state->pos_cov._value.cov[0] < 0.1 &&
-      state->pos_cov._value.cov[2] < 0.1 &&
-      state->pos_cov._value.cov[5] < 0.1) {
+      state->pos_cov._value.cov[0] < servo->emerg.dx &&
+      state->pos_cov._value.cov[2] < servo->emerg.dx &&
+      state->pos_cov._value.cov[5] < servo->emerg.dx) {
     x << state->pos._value.x, state->pos._value.y, state->pos._value.z;
     if (!desired->pos._present)
       xd = x + Eigen::Vector3d(0, 0, -5e-2);
-  } else
+    statex = true;
+  } else {
+    statex = false;
     x = xd;
+  }
 
   if (state->pos._present && !std::isnan(state->pos._value.qw) &&
       state->pos_cov._present &&
-      state->pos_cov._value.cov[9] < 0.1 &&
-      state->pos_cov._value.cov[14] < 0.1 &&
-      state->pos_cov._value.cov[20] < 0.1 &&
-      state->pos_cov._value.cov[27] < 0.1) {
+      state->pos_cov._value.cov[9] < servo->emerg.dq &&
+      state->pos_cov._value.cov[14] < servo->emerg.dq &&
+      state->pos_cov._value.cov[20] < servo->emerg.dq &&
+      state->pos_cov._value.cov[27] < servo->emerg.dq) {
     q.coeffs() <<
       state->pos._value.qx, state->pos._value.qy, state->pos._value.qz,
       state->pos._value.qw;
@@ -126,21 +130,27 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
   if (state->vel._present && !std::isnan(state->vel._value.vx) &&
       state->vel_cov._present &&
-      state->vel_cov._value.cov[0] < 0.1 &&
-      state->vel_cov._value.cov[2] < 0.1 &&
-      state->vel_cov._value.cov[5] < 0.1)
+      state->vel_cov._value.cov[0] < servo->emerg.dv &&
+      state->vel_cov._value.cov[2] < servo->emerg.dv &&
+      state->vel_cov._value.cov[5] < servo->emerg.dv) {
     v << state->vel._value.vx, state->vel._value.vy, state->vel._value.vz;
-  else
+    statev = true;
+  } else {
+    statev = false;
     v = vd;
+  }
 
   if (state->vel._present && !std::isnan(state->vel._value.wx) &&
       state->vel_cov._present &&
-      state->vel_cov._value.cov[9] < 0.1 &&
-      state->vel_cov._value.cov[14] < 0.1 &&
-      state->vel_cov._value.cov[20] < 0.1)
+      state->vel_cov._value.cov[9] < servo->emerg.dw &&
+      state->vel_cov._value.cov[14] < servo->emerg.dw &&
+      state->vel_cov._value.cov[20] < servo->emerg.dw)
     w << state->vel._value.wx, state->vel._value.wy, state->vel._value.wz;
   else
     w = wd;
+
+  if (!statex && !statev)
+    ad = Eigen::Vector3d(0, 0, - servo->emerg.descent);
 
 
   /* position error */

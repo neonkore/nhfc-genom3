@@ -52,6 +52,11 @@ component nhfc {
       double c;
 
       double ramp;
+
+      struct emerg_s {
+        double descent;
+        double dx, dq, dv, dw;
+      } emerg;
     } servo;
 
     or_pose_estimator::state desired;
@@ -69,6 +74,9 @@ component nhfc {
   };
   attribute set_servo_geom(in servo.d, in servo.kf, in servo.c) {
     validate nhfc_set_servo_geom(local in kf, inout servo);
+  };
+  attribute set_servo_emerg(in servo.emerg) {
+    validate nhfc_set_servo_emerg(local inout emerg);
   };
 
   attribute get_servo_parameters(out servo);

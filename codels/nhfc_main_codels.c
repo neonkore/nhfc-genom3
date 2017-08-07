@@ -47,7 +47,15 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
     .vmax = 90., .vmin = 16.,
     .d = 0.23, .kf = 6.5e-4,.c = 0.0154,
 
-    .ramp = 3
+    .ramp = 3,
+
+    .emerg = {
+      .descent = .1,
+      .dx = 0.03 * 0.03 /9.,
+      .dq = 3. * 3. * M_PI*M_PI/180/180/9.,
+      .dv = 0.03 * 0.03 /9.,
+      .dw = 3. * 3. * M_PI*M_PI/180/180/9.
+    }
   };
 
   nhfc_set_vlimit(ids->servo.vmin, ids->servo.vmax, &ids->servo, self);

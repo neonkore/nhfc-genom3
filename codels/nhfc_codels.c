@@ -62,6 +62,25 @@ nhfc_set_servo_geom(double kf, nhfc_ids_servo_s *servo,
 }
 
 
+/* --- Attribute set_servo_emerg ---------------------------------------- */
+
+/** Validation codel nhfc_set_servo_emerg of attribute set_servo_emerg.
+ *
+ * Returns genom_ok.
+ * Throws .
+ */
+genom_event
+nhfc_set_servo_emerg(nhfc_ids_servo_s_emerg_s *emerg,
+                     const genom_context self)
+{
+  emerg->dx = emerg->dx * emerg->dx / 9.;
+  emerg->dq = emerg->dq * emerg->dq / 9.;
+  emerg->dv = emerg->dv * emerg->dv / 9.;
+  emerg->dw = emerg->dw * emerg->dw / 9.;
+  return genom_ok;
+}
+
+
 /* --- Function set_state ----------------------------------------------- */
 
 /** Codel nhfc_set_state of function set_state.
