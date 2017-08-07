@@ -53,6 +53,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   Eigen::Vector3d x, v, w;
 
   Eigen::Vector3d ex, ev, eR, ew;
+  static Eigen::Vector3d Iex;
 
   Eigen::Vector3d f;
   Eigen::Map<Eigen::Matrix<double, 3, 1> > t(torque);
@@ -62,6 +63,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
   /* gains */
   const Eigen::Array3d Kp(servo->gain.Kpxy, servo->gain.Kpxy, servo->gain.Kpz);
+  const Eigen::Array3d Ki(servo->gain.Kixy, servo->gain.Kixy, servo->gain.Kiz);
   const Eigen::Array3d Kv(servo->gain.Kvxy, servo->gain.Kvxy, servo->gain.Kvz);
   const Eigen::Array3d Kq(servo->gain.Kqxy, servo->gain.Kqxy, servo->gain.Kqz);
   const Eigen::Array3d Kw(servo->gain.Kwxy, servo->gain.Kwxy, servo->gain.Kwz);
@@ -158,6 +160,10 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   for(i = 0; i < 3; i++)
     if (fabs(ex(i)) > servo->sat.x) ex(i) = copysign(servo->sat.x, ex(i));
 
+  Iex += ex * 1000./nhfc_control_period_ms;
+  for(i = 0; i < 3; i++)
+    if (fabs(Iex(i)) > servo->sat.ix) Iex(i) = copysign(servo->sat.ix, Iex(i));
+
   /* velocity error */
   ev = v - vd;
   for(i = 0; i < 3; i++)
@@ -166,7 +172,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
   /* desired orientation matrix */
   f =
-    - Kp * ex.array() - Kv * ev.array()
+    - Kp * ex.array() - Kv * ev.array() - Ki * Iex.array()
     + servo->mass * (Eigen::Vector3d(0, 0, 9.81) + ad).array();
 
   Rd.col(2) = f.normalized();

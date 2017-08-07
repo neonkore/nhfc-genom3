@@ -38,10 +38,11 @@ genom_event
 nhfc_main_start(nhfc_ids *ids, const genom_context self)
 {
   ids->servo = (nhfc_ids_servo_s){
-    .sat = { .x = 0.20, .v = 0.1 },
+    .sat = { .x = 0.20, .v = 0.1, .ix = 0.2 },
     .gain = {
       .Kpxy = 14., .Kvxy = 7., .Kpz = 20., .Kvz = 10.,
       .Kqxy = 2.3, .Kwxy = .23, .Kqz = .2, .Kwz = .02,
+      .Kixy = 0., .Kiz = 0.
     },
     .mass = 1.0,
     .vmax = 90., .vmin = 16.,
