@@ -21,6 +21,8 @@
  *
  *                                           Anthony Mallet on Tue Mar 22 2016
  */
+#include <err.h>
+
 #include <cmath>
 #include <cstdio>
 
@@ -58,8 +60,10 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   Eigen::Vector3d f;
   Eigen::Map<Eigen::Matrix<double, 3, 1> > t(torque);
   Eigen::Matrix3d E;
-  bool statex, statev;
   int i;
+
+  static bool emerg;
+  bool emerg_x, emerg_q, emerg_v, emerg_w;
 
   /* gains */
   const Eigen::Array3d Kp(servo->gain.Kpxy, servo->gain.Kpxy, servo->gain.Kpz);
@@ -109,9 +113,9 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
     x << state->pos._value.x, state->pos._value.y, state->pos._value.z;
     if (!desired->pos._present)
       xd = x + Eigen::Vector3d(0, 0, -5e-2);
-    statex = true;
+    emerg_x = false;
   } else {
-    statex = false;
+    emerg_x = true;
     x = xd;
   }
 
@@ -126,8 +130,11 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
       state->pos._value.qw;
     if (!desired->pos._present)
       qd = q;
-  } else
+    emerg_q = false;
+  } else {
+    emerg_q = true;
     q = qd;
+  }
   R = q.matrix();
 
   if (state->vel._present && !std::isnan(state->vel._value.vx) &&
@@ -136,9 +143,9 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
       state->vel_cov._value.cov[2] < servo->emerg.dv &&
       state->vel_cov._value.cov[5] < servo->emerg.dv) {
     v << state->vel._value.vx, state->vel._value.vy, state->vel._value.vz;
-    statev = true;
+    emerg_v = false;
   } else {
-    statev = false;
+    emerg_v = true;
     v = vd;
   }
 
@@ -146,13 +153,28 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
       state->vel_cov._present &&
       state->vel_cov._value.cov[9] < servo->emerg.dw &&
       state->vel_cov._value.cov[14] < servo->emerg.dw &&
-      state->vel_cov._value.cov[20] < servo->emerg.dw)
+      state->vel_cov._value.cov[20] < servo->emerg.dw) {
     w << state->vel._value.wx, state->vel._value.wy, state->vel._value.wz;
-  else
+    emerg_w = false;
+  } else {
+    emerg_w = true;
     w = wd;
+  }
 
-  if (!statex && !statev)
+  if (emerg_x || emerg_v)
     ad = Eigen::Vector3d(0, 0, - servo->emerg.descent);
+
+  if (emerg_x || emerg_q || emerg_v || emerg_w) {
+    if (!emerg) {
+      warnx("emergency descent due to uncertain state estimation");
+      emerg = true;
+    }
+  } else {
+    if (emerg) {
+      warnx("recovered from emergency");
+      emerg = false;
+    }
+  }
 
 
   /* position error */
