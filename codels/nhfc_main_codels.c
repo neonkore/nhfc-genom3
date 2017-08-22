@@ -52,10 +52,10 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
 
     .emerg = {
       .descent = .1,
-      .dx = 0.03 * 0.03 /9.,
-      .dq = 3. * 3. * M_PI*M_PI/180/180/9.,
-      .dv = 0.03 * 0.03 /9.,
-      .dw = 3. * 3. * M_PI*M_PI/180/180/9.
+      .dx = 0.05 * 0.05 /9.,
+      .dq = 5. * 5. * M_PI*M_PI/180./180./9.,
+      .dv = 0.2 * 0.2 /9.,
+      .dw = 20. * 20. * M_PI*M_PI/180./180./9.
     }
   };
 
