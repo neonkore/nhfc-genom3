@@ -182,7 +182,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   for(i = 0; i < 3; i++)
     if (fabs(ex(i)) > servo->sat.x) ex(i) = copysign(servo->sat.x, ex(i));
 
-  Iex += ex * 1000./nhfc_control_period_ms;
+  Iex += ex * nhfc_control_period_ms/1000.;
   for(i = 0; i < 3; i++)
     if (fabs(Iex(i)) > servo->sat.ix) Iex(i) = copysign(servo->sat.ix, Iex(i));
 
