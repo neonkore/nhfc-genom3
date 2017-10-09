@@ -1,0 +1,522 @@
+//
+// Copyright (c) 2015-2017 LAAS/CNRS
+// All rights reserved.
+//
+// Redistribution and use  in source  and binary  forms,  with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+//   1. Redistributions of  source  code must retain the  above copyright
+//      notice and this list of conditions.
+//   2. Redistributions in binary form must reproduce the above copyright
+//      notice and  this list of  conditions in the  documentation and/or
+//      other materials provided with the distribution.
+//
+//					Anthony Mallet on Tue Aug 11 2015
+//
+
+// This file was generated from nhfc.gen by the skeleton
+// template. Manual changes should be preserved, although they should
+// rather be added to the "doc" attributes of the genom objects defined in
+// nhfc.gen.
+
+= nhfc component
+openrobots@laas.fr
+1.4
+:toc: left
+
+// fix default asciidoctor stylesheet issue #2407 and add hr clear rule
+ifdef::backend-html5[]
+[pass]
+++++
+<link rel="stylesheet" href="data:text/css,p{font-size: inherit !important}" >
+<link rel="stylesheet" href="data:text/css,hr{clear: both}" >
+++++
+endif::[]
+
+
+
+== Ports
+
+
+[[rotor_input]]
+=== rotor_input (out)
+
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Data structure
+[disc]
+ * `struct ::or_rotorcraft::input` `rotor_input`
+ ** `struct ::or::time::ts` `ts`
+ *** `unsigned long` `sec`
+ *** `unsigned long` `nsec`
+ ** `enum ::or_rotorcraft::control_type` `control` ∈ { `velocity`, `throttle` }
+ ** `sequence< double, 8 >` `desired`
+
+|===
+
+'''
+
+[[rotor_measure]]
+=== rotor_measure (in)
+
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Data structure
+[disc]
+ * `struct ::or_rotorcraft::output` `rotor_measure`
+ ** `sequence< struct ::or_rotorcraft::rotor_state, 8 >` `rotor`
+ *** `struct ::or::time::ts` `ts`
+ **** `unsigned long` `sec`
+ **** `unsigned long` `nsec`
+ *** `boolean` `emerg`
+ *** `boolean` `spinning`
+ *** `boolean` `starting`
+ *** `boolean` `disabled`
+ *** `double` `velocity`
+ *** `double` `throttle`
+ *** `double` `consumption`
+ *** `double` `energy_level`
+
+|===
+
+'''
+
+[[state]]
+=== state (in)
+
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Data structure
+[disc]
+ * `struct ::or_pose_estimator::state` `state`
+ ** `struct ::or::time::ts` `ts`
+ *** `unsigned long` `sec`
+ *** `unsigned long` `nsec`
+ ** `boolean` `intrinsic`
+ ** `optional< struct ::or::t3d::pos >` `pos`
+ *** `double` `x`
+ *** `double` `y`
+ *** `double` `z`
+ *** `double` `qw`
+ *** `double` `qx`
+ *** `double` `qy`
+ *** `double` `qz`
+ ** `optional< struct ::or::t3d::pos_cov >` `pos_cov`
+ *** `double` `cov[28]`
+ ** `optional< struct ::or::t3d::vel >` `vel`
+ *** `double` `vx`
+ *** `double` `vy`
+ *** `double` `vz`
+ *** `double` `wx`
+ *** `double` `wy`
+ *** `double` `wz`
+ ** `optional< struct ::or::t3d::vel_cov >` `vel_cov`
+ *** `double` `cov[21]`
+ ** `optional< struct ::or::t3d::acc >` `acc`
+ *** `double` `ax`
+ *** `double` `ay`
+ *** `double` `az`
+ ** `optional< struct ::or::t3d::acc_cov >` `acc_cov`
+ *** `double` `cov[6]`
+
+|===
+
+'''
+
+[[reference]]
+=== reference (in)
+
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Data structure
+[disc]
+ * `struct ::or_pose_estimator::state` `reference`
+ ** `struct ::or::time::ts` `ts`
+ *** `unsigned long` `sec`
+ *** `unsigned long` `nsec`
+ ** `boolean` `intrinsic`
+ ** `optional< struct ::or::t3d::pos >` `pos`
+ *** `double` `x`
+ *** `double` `y`
+ *** `double` `z`
+ *** `double` `qw`
+ *** `double` `qx`
+ *** `double` `qy`
+ *** `double` `qz`
+ ** `optional< struct ::or::t3d::pos_cov >` `pos_cov`
+ *** `double` `cov[28]`
+ ** `optional< struct ::or::t3d::vel >` `vel`
+ *** `double` `vx`
+ *** `double` `vy`
+ *** `double` `vz`
+ *** `double` `wx`
+ *** `double` `wy`
+ *** `double` `wz`
+ ** `optional< struct ::or::t3d::vel_cov >` `vel_cov`
+ *** `double` `cov[21]`
+ ** `optional< struct ::or::t3d::acc >` `acc`
+ *** `double` `ax`
+ *** `double` `ay`
+ *** `double` `az`
+ ** `optional< struct ::or::t3d::acc_cov >` `acc_cov`
+ *** `double` `cov[6]`
+
+|===
+
+'''
+
+== Services
+
+[[set_saturation]]
+=== set_saturation (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `struct ::nhfc::ids::servo_s::sat_s` `sat`
+ ** `double` `x`
+ ** `double` `v`
+ ** `double` `ix`
+
+|===
+
+'''
+
+[[set_servo_gain]]
+=== set_servo_gain (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `struct ::nhfc::ids::servo_s::gain_s` `gain`
+ ** `double` `Kpxy`
+ ** `double` `Kpz`
+ ** `double` `Kqxy`
+ ** `double` `Kqz`
+ ** `double` `Kvxy`
+ ** `double` `Kvz`
+ ** `double` `Kwxy`
+ ** `double` `Kwz`
+ ** `double` `Kixy`
+ ** `double` `Kiz`
+
+|===
+
+'''
+
+[[set_mass]]
+=== set_mass (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `double` `mass`
+
+|===
+
+'''
+
+[[set_vlimit]]
+=== set_vlimit (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `double` `vmin`
+
+ * `double` `vmax`
+
+|===
+
+'''
+
+[[set_servo_geom]]
+=== set_servo_geom (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `double` `d`
+
+ * `double` `kf`
+
+ * `double` `c`
+
+|===
+
+'''
+
+[[set_servo_emerg]]
+=== set_servo_emerg (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `struct ::nhfc::ids::servo_s::emerg_s` `emerg`
+ ** `double` `descent`
+ ** `double` `dx`
+ ** `double` `dq`
+ ** `double` `dv`
+ ** `double` `dw`
+
+|===
+
+'''
+
+[[get_servo_parameters]]
+=== get_servo_parameters (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Outputs
+[disc]
+ * `struct ::nhfc::ids::servo_s` `servo`
+ ** `struct ::nhfc::ids::servo_s::sat_s` `sat`
+ *** `double` `x`
+ *** `double` `v`
+ *** `double` `ix`
+ ** `struct ::nhfc::ids::servo_s::gain_s` `gain`
+ *** `double` `Kpxy`
+ *** `double` `Kpz`
+ *** `double` `Kqxy`
+ *** `double` `Kqz`
+ *** `double` `Kvxy`
+ *** `double` `Kvz`
+ *** `double` `Kwxy`
+ *** `double` `Kwz`
+ *** `double` `Kixy`
+ *** `double` `Kiz`
+ ** `double` `mass`
+ ** `double` `vmin`
+ ** `double` `vmax`
+ ** `double` `fmin`
+ ** `double` `fmax`
+ ** `double` `d`
+ ** `double` `kf`
+ ** `double` `c`
+ ** `double` `ramp`
+ ** `struct ::nhfc::ids::servo_s::emerg_s` `emerg`
+ *** `double` `descent`
+ *** `double` `dx`
+ *** `double` `dq`
+ *** `double` `dv`
+ *** `double` `dw`
+
+|===
+
+'''
+
+[[get_desired]]
+=== get_desired (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Outputs
+[disc]
+ * `struct ::or_pose_estimator::state` `desired`
+ ** `struct ::or::time::ts` `ts`
+ *** `unsigned long` `sec`
+ *** `unsigned long` `nsec`
+ ** `boolean` `intrinsic`
+ ** `optional< struct ::or::t3d::pos >` `pos`
+ *** `double` `x`
+ *** `double` `y`
+ *** `double` `z`
+ *** `double` `qw`
+ *** `double` `qx`
+ *** `double` `qy`
+ *** `double` `qz`
+ ** `optional< struct ::or::t3d::pos_cov >` `pos_cov`
+ *** `double` `cov[28]`
+ ** `optional< struct ::or::t3d::vel >` `vel`
+ *** `double` `vx`
+ *** `double` `vy`
+ *** `double` `vz`
+ *** `double` `wx`
+ *** `double` `wy`
+ *** `double` `wz`
+ ** `optional< struct ::or::t3d::vel_cov >` `vel_cov`
+ *** `double` `cov[21]`
+ ** `optional< struct ::or::t3d::acc >` `acc`
+ *** `double` `ax`
+ *** `double` `ay`
+ *** `double` `az`
+ ** `optional< struct ::or::t3d::acc_cov >` `acc_cov`
+ *** `double` `cov[6]`
+
+|===
+
+'''
+
+[[servo]]
+=== servo (activity)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Throws
+[disc]
+ * `exception ::nhfc::e_input`
+
+a|.Context
+[disc]
+  * In task `<<main>>`
+  (frequency 1000.0 _Hz_)
+  * Reads port `<<reference>>`
+|===
+
+Track a desired position
+
+'''
+
+[[set_state]]
+=== set_state (function)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `struct ::or::t3d::pos` `pos`: Position
+ ** `double` `x`
+ ** `double` `y`
+ ** `double` `z`
+ ** `double` `qw`
+ ** `double` `qx`
+ ** `double` `qy`
+ ** `double` `qz`
+
+ * `struct ::or::t3d::vel` `vel`: Velocity
+ ** `double` `vx`
+ ** `double` `vy`
+ ** `double` `vz`
+ ** `double` `wx`
+ ** `double` `wy`
+ ** `double` `wz`
+
+ * `struct ::or::t3d::acc` `acc`: Acceleration
+ ** `double` `ax`
+ ** `double` `ay`
+ ** `double` `az`
+
+a|.Context
+[disc]
+  * Interrupts `<<servo>>`
+|===
+
+Set the desired state
+
+'''
+
+[[set_position]]
+=== set_position (function)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `double` `x`
+
+ * `double` `y`
+
+ * `double` `z`
+
+ * `double` `yaw`
+
+a|.Context
+[disc]
+  * Interrupts `<<servo>>`
+|===
+
+Set the desired position
+
+'''
+
+[[set_current_position]]
+=== set_current_position (activity)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Throws
+[disc]
+ * `exception ::nhfc::e_input`
+
+a|.Context
+[disc]
+  * In task `<<main>>`
+  (frequency 1000.0 _Hz_)
+  * Reads port `<<state>>`
+  * Interrupts `<<servo>>`
+|===
+
+Set the desired position
+
+'''
+
+[[stop]]
+=== stop (function)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Context
+[disc]
+  * Interrupts `<<servo>>`
+|===
+
+Stop tracking a desired position
+
+'''
+
+[[log]]
+=== log (function)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `string<64>` `path` (default `"/tmp/nhfc.log"`) Log file name
+
+a|.Throws
+[disc]
+ * `exception ::nhfc::e_sys`
+ ** `short` `code`
+ ** `string<128>` `what`
+
+|===
+
+Log state
+
+'''
+
+[[log_stop]]
+=== log_stop (function)
+
+
+Stop logging
+
+'''
+
+== Tasks
+
+[[main]]
+=== main
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Context
+[disc]
+  * Frequency 1000.0 _Hz_
+* Updates port `<<rotor_input>>`
+* Reads port `<<state>>`
+|===
+
+'''
