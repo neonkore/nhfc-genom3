@@ -83,6 +83,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   } else {
     xd << 0., 0., 0.;
     qd = Eigen::Quaternion<double>::Identity();
+    Iex << 0., 0., 0.;
   }
 
   if (desired->vel._present) {
@@ -117,6 +118,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   } else {
     emerg_x = true;
     x = xd;
+    Iex << 0., 0., 0.;
   }
 
   if (state->pos._present && !std::isnan(state->pos._value.qw) &&
