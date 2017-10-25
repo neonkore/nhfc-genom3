@@ -122,11 +122,11 @@ nhfc_main_init(const or_pose_estimator_state *desired,
 genom_event
 nhfc_main_control(const nhfc_ids_servo_s *servo,
                   or_pose_estimator_state *desired,
-                  const nhfc_state *state, const nhfc_log_s *log,
+                  const nhfc_state *state, nhfc_log_s **log,
                   const nhfc_rotor_input *rotor_input,
                   const genom_context self)
 {
-  const or_pose_estimator_state *state_data;
+  const or_pose_estimator_state *state_data = NULL;
   or_rotorcraft_input *input_data;
   double thrust, torque[3];
   struct timeval tv;
