@@ -17,8 +17,10 @@
 #include "acnhfc.h"
 
 #include <sys/time.h>
+#include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "nhfc_c_types.h"
 #include "codels.h"
@@ -201,17 +203,31 @@ nhfc_servo_stop(or_pose_estimator_state *desired,
  * Throws nhfc_e_sys.
  */
 genom_event
-nhfc_log(const char path[64], nhfc_log_s **log,
+nhfc_log(const char path[64], uint32_t decimation, nhfc_log_s **log,
          const genom_context self)
 {
-  FILE *f;
+  int fd;
 
-  f = fopen(path, "w");
-  if (!f) return nhfc_e_sys_error(path, self);
-  fprintf(f, nhfc_log_header_fmt "\n");
+  fd = open(path, O_WRONLY|O_APPEND|O_CREAT|O_TRUNC, 0666);
+  if (fd < 0) return nhfc_e_sys_error(path, self);
 
-  if ((*log)->f) fclose((*log)->f);
-  (*log)->f = f;
+  if (write(fd, nhfc_log_header_fmt "\n", sizeof(nhfc_log_header_fmt)) < 0)
+    return nhfc_e_sys_error(path, self);
+
+  if ((*log)->req.aio_fildes >= 0) {
+    close((*log)->req.aio_fildes);
+
+    if ((*log)->pending)
+      while (aio_error(&(*log)->req) == EINPROGRESS)
+        /* empty body */;
+  }
+  (*log)->req.aio_fildes = fd;
+  (*log)->pending = false;
+  (*log)->skipped = false;
+  (*log)->decimation = decimation < 1 ? 1 : decimation;
+  (*log)->missed = 0;
+  (*log)->total = 0;
+
   return genom_ok;
 }
 
@@ -227,8 +243,28 @@ nhfc_log_stop(nhfc_log_s **log, const genom_context self)
 {
   (void)self; /* -Wunused-parameter */
 
-  if ((*log)->f) fclose((*log)->f);
-  (*log)->f = NULL;
+  if (*log && (*log)->req.aio_fildes >= 0)
+    close((*log)->req.aio_fildes);
+  (*log)->req.aio_fildes = -1;
 
+  return genom_ok;
+}
+
+
+/* --- Function log_info ------------------------------------------------ */
+
+/** Codel nhfc_log_info of function log_info.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+nhfc_log_info(const nhfc_log_s *log, uint32_t *miss, uint32_t *total,
+              const genom_context self)
+{
+  *miss = *total = 0;
+  if (log) {
+    *miss = log->missed;
+    *total = log->total;
+  }
   return genom_ok;
 }

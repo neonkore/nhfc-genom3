@@ -72,7 +72,19 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
   /* init logging */
   ids->log = malloc(sizeof(*ids->log));
   if (!ids->log) abort();
-  ids->log->f = NULL;
+  *ids->log = (nhfc_log_s){
+    .req = {
+      .aio_fildes = -1,
+      .aio_offset = 0,
+      .aio_buf = ids->log->buffer,
+      .aio_nbytes = 0,
+      .aio_reqprio = 0,
+      .aio_sigevent = { .sigev_notify = SIGEV_NONE },
+      .aio_lio_opcode = LIO_NOP
+    },
+    .pending = false, .skipped = false,
+    .decimation = 1, .missed = 0, .total = 0
+  };
 
   return nhfc_init;
 }
@@ -149,7 +161,7 @@ nhfc_main_control(const nhfc_ids_servo_s *servo,
   }
 
   /* controller */
-  s = nhfc_controller(servo, state_data, desired, log, &thrust, torque);
+  s = nhfc_controller(servo, state_data, desired, *log, &thrust, torque);
   if (s) return nhfc_pause_control;
 
   /* thrust limitation */

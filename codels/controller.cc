@@ -21,7 +21,11 @@
  *
  *                                           Anthony Mallet on Tue Mar 22 2016
  */
+#include "acnhfc.h"
+
+#include <aio.h>
 #include <err.h>
+#include <unistd.h>
 
 #include <cmath>
 #include <cstdio>
@@ -43,7 +47,7 @@ int
 nhfc_controller(const nhfc_ids_servo_s *servo,
                 const or_pose_estimator_state *state,
                 const or_pose_estimator_state *desired,
-                const nhfc_log_s *log,
+                nhfc_log_s *log,
                 double *thrust, double torque[3])
 {
   Eigen::Matrix3d Rd;
@@ -224,29 +228,59 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
 
 
   /* logging */
-  if (log->f) {
-    double d;
-    double roll, pitch, yaw;
-
-    d = hypot(Rd(0,0), Rd(1,0));
-    if (fabs(d) > 1e-10) {
-      yaw = atan2(Rd(1,0), Rd(0,0));
-      roll = atan2(Rd(2,1), Rd(2,2));
-    } else {
-      yaw = atan2(-Rd(0,1), Rd(1,1));
-      roll = 0.;
+  if (log->req.aio_fildes >= 0) {
+    log->total++;
+    if (log->total % log->decimation == 0) {
+      if (log->pending) {
+        if (aio_error(&log->req) != EINPROGRESS) {
+          log->pending = false;
+          if (aio_return(&log->req) <= 0) {
+            warn("log");
+            close(log->req.aio_fildes);
+            log->req.aio_fildes = -1;
+          }
+        } else {
+          log->skipped = true;
+          log->missed++;
+        }
+      }
     }
-    pitch = atan2(-Rd(2,0), d);
 
-    fprintf(
-      log->f, nhfc_log_fmt "\n",
-      state->ts.sec, state->ts.nsec, *thrust,
-      f(0), f(1), f(2), t(0), t(1), t(2),
-      xd(0), xd(1), xd(2), roll, pitch, yaw,
-      vd(0), vd(1), vd(2), wd(0), wd(1), wd(2),
-      ad(0), ad(1), ad(2),
-      ex(0), ex(1), ex(2), ev(0), ev(1), ev(2),
-      eR(0), eR(1), eR(2), ew(0), ew(1), ew(2));
+    if (log->req.aio_fildes >= 0 && !log->pending) {
+      double d;
+      double roll, pitch, yaw;
+
+      d = hypot(Rd(0,0), Rd(1,0));
+      if (fabs(d) > 1e-10) {
+        yaw = atan2(Rd(1,0), Rd(0,0));
+        roll = atan2(Rd(2,1), Rd(2,2));
+      } else {
+        yaw = atan2(-Rd(0,1), Rd(1,1));
+        roll = 0.;
+      }
+      pitch = atan2(-Rd(2,0), d);
+
+      log->req.aio_nbytes = snprintf(
+        log->buffer, sizeof(log->buffer),
+        "%s" nhfc_log_fmt "\n",
+        log->skipped ? "\n" : "",
+        state->ts.sec, state->ts.nsec, *thrust,
+        f(0), f(1), f(2), t(0), t(1), t(2),
+        xd(0), xd(1), xd(2), roll, pitch, yaw,
+        vd(0), vd(1), vd(2), wd(0), wd(1), wd(2),
+        ad(0), ad(1), ad(2),
+        ex(0), ex(1), ex(2), ev(0), ev(1), ev(2),
+        eR(0), eR(1), eR(2), ew(0), ew(1), ew(2));
+
+      if (aio_write(&log->req)) {
+        warn("log");
+        close(log->req.aio_fildes);
+        log->req.aio_fildes = -1;
+      } else
+        log->pending = true;
+
+      log->skipped = false;
+    }
   }
 
   return 0;

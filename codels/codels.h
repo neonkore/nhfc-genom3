@@ -24,6 +24,8 @@
 #ifndef H_NHFC_CODELS
 #define H_NHFC_CODELS
 
+#include <aio.h>
+
 #include "nhfc_c_types.h"
 
 #ifdef __cplusplus
@@ -33,7 +35,7 @@ extern "C" {
   int	nhfc_controller(const nhfc_ids_servo_s *servo,
                         const or_pose_estimator_state *state,
                         const or_pose_estimator_state *desired,
-                        const nhfc_log_s *log,
+                        nhfc_log_s *log,
                         double *thrust, double torque[3]);
 
 #ifdef __cplusplus
@@ -58,7 +60,11 @@ nhfc_e_sys_error(const char *s, genom_context self)
 }
 
 struct nhfc_log_s {
-  FILE *f;
+  struct aiocb req;
+  char buffer[4096];
+  bool pending, skipped;
+  uint32_t decimation;
+  size_t missed, total;
 
 # define nhfc_logfmt	" %e "
 # define nhfc_log_header_fmt                                            \

@@ -93,7 +93,7 @@ component nhfc {
     codel<init> nhfc_main_init(in desired, out rotor_input)
       yield pause::init, control;
     codel<control> nhfc_main_control(in servo, inout desired, in state,
-                                     in log, out rotor_input)
+                                     inout log, out rotor_input)
       yield pause::control;
     codel<stop> mk_main_stop(out rotor_input)
       yield ether;
@@ -154,10 +154,11 @@ component nhfc {
 
   /* --- logging ----------------------------------------------------------- */
 
-  function log(in string<64> path = "/tmp/nhfc.log": "Log file name") {
+  function log(in string<64> path = "/tmp/nhfc.log": "Log file name",
+               in unsigned long decimation = 1: "Reduced logging frequency") {
     doc		"Log state";
 
-    codel nhfc_log(in path, inout log);
+    codel nhfc_log(in path, in decimation, inout log);
 
     throw e_sys;
   };
@@ -166,5 +167,12 @@ component nhfc {
     doc		"Stop logging";
 
     codel nhfc_log_stop(out log);
+  };
+
+  function log_info(out unsigned long miss = :"Missed log entries",
+                    out unsigned long total = :"Total log entries") {
+    doc		"Show missed log entries";
+
+    codel nhfc_log_info(in log, out miss, out total);
   };
 };
