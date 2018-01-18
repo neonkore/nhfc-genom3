@@ -29,7 +29,6 @@
 
 #include <cmath>
 #include <cstdio>
-#include <iostream>
 
 #include "Eigen/Core"
 #include "Eigen/Dense"

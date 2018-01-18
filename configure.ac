@@ -35,7 +35,7 @@ AC_SEARCH_LIBS([aio_write], [rt],, AC_MSG_ERROR([aio_write() not found], 2))
 
 dnl External packages
 PKG_CHECK_MODULES(requires, [
-  openrobots-idl >= 1.4
+  openrobots-idl >= 1.5
   genom3 >= 2.99.26
   eigen3
 ])

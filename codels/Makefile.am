@@ -19,7 +19,10 @@ lib_LTLIBRARIES = libnhfc_codels.la
 libnhfc_codels_la_SOURCES=	nhfc_c_types.h
 libnhfc_codels_la_SOURCES+=	nhfc_codels.c
 libnhfc_codels_la_SOURCES+=	nhfc_main_codels.c
+libnhfc_codels_la_SOURCES+=	nhfc_wo_codels.c
+
 libnhfc_codels_la_SOURCES+=	controller.cc
+libnhfc_codels_la_SOURCES+=	observer.cc
 libnhfc_codels_la_SOURCES+=	codels.h
 
 libnhfc_codels_la_CPPFLAGS=	$(requires_CFLAGS)

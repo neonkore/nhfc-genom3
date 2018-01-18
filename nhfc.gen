@@ -14,9 +14,10 @@
  *
  *					Anthony Mallet on Tue Aug 11 2015
  */
-#pragma require "openrobots-idl >= 1.4"
+#pragma require "openrobots-idl >= 1.5"
 
 #include "or/pose/pose_estimator.gen"
+#include "or/pose/wrench_estimator.gen"
 #include "or/robot/rotorcraft.gen"
 
 component nhfc {
@@ -27,9 +28,12 @@ component nhfc {
   codels-require	"eigen3";
 
   uses		or_rotorcraft, or_pose_estimator;
+  provides	or_wrench_estimator;
 
   port in	or_pose_estimator::state state;
   port in	or_pose_estimator::state reference;
+
+  port out	or_wrench_estimator::state external_wrench;
 
   exception e_input;
   exception e_sys { short code; string<128> what; };
@@ -67,6 +71,10 @@ component nhfc {
 
     or_pose_estimator::state desired;
 
+    struct wo_s {
+      double K[6];	/* observer gains */
+    } wo;
+
     /* logging */
     log_s log;
   };
@@ -87,10 +95,12 @@ component nhfc {
   attribute set_emerg(in servo.emerg) {
     validate nhfc_set_emerg(local inout emerg);
   };
+  attribute set_wo_gains(in wo.K =: "Wrench observer gains");
 
   attribute get_servo_parameters(out servo);
   attribute get_body_parameters(out body);
   attribute get_desired(out desired);
+  attribute get_wo_parameters(out wo);
 
   const unsigned short control_period_ms = 1;
 
@@ -158,6 +168,24 @@ component nhfc {
     codel nhfc_servo_stop(out desired);
 
     interrupt servo;
+  };
+
+
+  /* --- wrench observer --------------------------------------------------- */
+
+  const unsigned short wo_period_ms = 10;
+
+  task wo {
+    period wo_period_ms ms;
+
+    codel<start> nhfc_wo_start(out ::ids, out external_wrench)
+      yield main;
+    codel<main> nhfc_wo_main(in body, in wo, in state, in rotor_measure,
+                             out external_wrench)
+      yield pause::main, stop;
+
+    codel<stop> mk_wo_stop(inout ::ids)
+      yield ether;
   };
 
 

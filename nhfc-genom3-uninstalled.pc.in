@@ -7,5 +7,5 @@ includedir=${prefix}/codels
 Name: nhfc-genom3
 Description: nhfc interface and codels library
 Version: @PACKAGE_VERSION@
-Requires: openrobots-idl >= 1.4, genom3 >= 2.99.26, eigen3
+Requires: openrobots-idl >= 1.5, genom3 >= 2.99.26, eigen3
 Libs: ${libdir}/libnhfc_codels.la
