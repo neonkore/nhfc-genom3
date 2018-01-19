@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 LAAS/CNRS
+ * Copyright (c) 2016-2018 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution  and  use  in  source  and binary  forms,  with  or  without
@@ -29,11 +29,12 @@
 
 #include <cmath>
 #include <cstdio>
+#include <iostream>
 
-#include <Eigen/Core>
-#include <Eigen/Dense>
+#include "Eigen/Core"
+#include "Eigen/Dense"
 
-#include <codels.h>
+#include "codels.h"
 
 /*
  * This file implements the controller described in:
@@ -44,37 +45,47 @@
  */
 
 int
-nhfc_controller(const nhfc_ids_servo_s *servo,
+nhfc_controller(const nhfc_ids_body_s *body,
+                const nhfc_ids_servo_s *servo,
                 const or_pose_estimator_state *state,
                 const or_pose_estimator_state *desired,
                 nhfc_log_s *log,
-                double *thrust, double torque[3])
+                or_rotorcraft_rotor_control *wprop)
 {
-  Eigen::Matrix3d Rd;
-  Eigen::Quaternion<double> qd;
-  Eigen::Vector3d xd, vd, wd, ad;
+  using namespace Eigen;
 
-  Eigen::Matrix3d R;
-  Eigen::Quaternion<double> q;
-  Eigen::Vector3d x, v, w;
+  Matrix3d Rd;
+  Quaternion<double> qd;
+  Vector3d xd, vd, wd, ad;
 
-  Eigen::Vector3d ex, ev, eR, ew;
-  static Eigen::Vector3d Iex;
+  Matrix3d R;
+  Quaternion<double> q;
+  Vector3d x, v, w;
 
-  Eigen::Vector3d f;
-  Eigen::Map<Eigen::Matrix<double, 3, 1> > t(torque);
-  Eigen::Matrix3d E;
+  Vector3d ex, ev, eR, ew;
+  static Vector3d Iex;
+  Matrix3d E;
+
+  Vector3d f;
+  Matrix<double, 6, 1> wrench;
+  Map< Array<double, or_rotorcraft_max_rotors, 1> > wprop_(wprop->_buffer);
+
   int i;
 
   static bool emerg;
   bool emerg_x, emerg_q, emerg_v, emerg_w;
 
+  /* geometry */
+  Map<
+    const Matrix<double, or_rotorcraft_max_rotors, 6, RowMajor>
+    > iG_(body->iG);
+
   /* gains */
-  const Eigen::Array3d Kp(servo->gain.Kpxy, servo->gain.Kpxy, servo->gain.Kpz);
-  const Eigen::Array3d Ki(servo->gain.Kixy, servo->gain.Kixy, servo->gain.Kiz);
-  const Eigen::Array3d Kv(servo->gain.Kvxy, servo->gain.Kvxy, servo->gain.Kvz);
-  const Eigen::Array3d Kq(servo->gain.Kqxy, servo->gain.Kqxy, servo->gain.Kqz);
-  const Eigen::Array3d Kw(servo->gain.Kwxy, servo->gain.Kwxy, servo->gain.Kwz);
+  const Array3d Kp(servo->gain.Kpxy, servo->gain.Kpxy, servo->gain.Kpz);
+  const Array3d Ki(servo->gain.Kixy, servo->gain.Kixy, servo->gain.Kiz);
+  const Array3d Kv(servo->gain.Kvxy, servo->gain.Kvxy, servo->gain.Kvz);
+  const Array3d Kq(servo->gain.Kqxy, servo->gain.Kqxy, servo->gain.Kqz);
+  const Array3d Kw(servo->gain.Kwxy, servo->gain.Kwxy, servo->gain.Kwz);
 
 
   /* desired state */
@@ -201,7 +212,7 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   /* desired orientation matrix */
   f =
     - Kp * ex.array() - Kv * ev.array() - Ki * Iex.array()
-    + servo->mass * (Eigen::Vector3d(0, 0, 9.81) + ad).array();
+    + body->mass * (Eigen::Vector3d(0, 0, 9.81) + ad).array();
 
   Rd.col(2) = f.normalized();
 
@@ -222,9 +233,41 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   /* angular velocity error */
   ew = R.transpose() * (w - wd);
 
+
+  /* wrench - XXX assumes vertical thrust in body frame */
+  wrench.block<3, 1>(0, 0) << 0., 0., f.dot(R.col(2));
+  wrench.block<3, 1>(3, 0) = - Kq * eR.array() - Kw * ew.array();
+
+
+  /* thrust limitation */
+  if (wrench(2) < body->thrust_min[2]) wrench(2) = body->thrust_min[2];
+  if (wrench(2) > body->thrust_max[2]) wrench(2) = body->thrust_max[2];
+
   /* output */
-  *thrust = f.dot(R.col(2));
-  t = - Kq * eR.array() - Kw * ew.array();
+  wprop_ = (iG_ * wrench).array().sqrt();
+
+  /* torque limitation */
+  if ((wprop_.block(0, 0, wprop->_length, 1) < body->wmin).any() ||
+      (wprop_.block(0, 0, wprop->_length, 1) > body->wmax).any()) {
+    Array<double, 6, 1> k, kmin, kmax;
+
+    kmin << 1., 1., 1., 0., 0., 0.;
+    kmax << 1., 1., 1., 1., 1., 1.;
+
+    do {
+      k = (kmin + kmax)/2.;
+
+      wprop_ = (iG_ * (wrench.array() * k).matrix()).array().sqrt();
+
+      if ((wprop_.block(0, 0, wprop->_length, 1) < body->wmin).any() ||
+          (wprop_.block(0, 0, wprop->_length, 1) > body->wmax).any())
+        kmax = k;
+      else
+        kmin = k;
+    } while(((kmax - kmin) > 1e-2).any());
+
+    wrench = wrench.array() * k;
+  }
 
 
   /* logging */
@@ -264,8 +307,8 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
         log->buffer, sizeof(log->buffer),
         "%s" nhfc_log_fmt "\n",
         log->skipped ? "\n" : "",
-        state->ts.sec, state->ts.nsec, *thrust,
-        f(0), f(1), f(2), t(0), t(1), t(2),
+        state->ts.sec, state->ts.nsec, wrench(2),
+        wrench(0), wrench(1), wrench(2), wrench(3), wrench(4), wrench(5),
         xd(0), xd(1), xd(2), roll, pitch, yaw,
         vd(0), vd(1), vd(2), wd(0), wd(1), wd(2),
         ad(0), ad(1), ad(2),
@@ -284,4 +327,36 @@ nhfc_controller(const nhfc_ids_servo_s *servo,
   }
 
   return 0;
+}
+
+
+/* --- nhfc_invert_G ------------------------------------------------------- */
+
+void
+nhfc_invert_G(const double G[6 * or_rotorcraft_max_rotors],
+              double iG[or_rotorcraft_max_rotors * 6])
+{
+  using namespace Eigen;
+
+  Map< const Matrix<double, 6, or_rotorcraft_max_rotors, RowMajor> > G_(G);
+  Map< Matrix<double, or_rotorcraft_max_rotors, 6, RowMajor> > iG_(iG);
+
+  iG_ = G_.
+    jacobiSvd(ComputeFullU | ComputeFullV).
+    solve(Matrix<double, 6, 6>::Identity());
+}
+
+
+/* --- nhfc_Gw2 ------------------------------------------------------------ */
+
+void
+nhfc_Gw2(const double G[6 * or_rotorcraft_max_rotors], const double w,
+         double f[6])
+{
+  using namespace Eigen;
+
+  Map< const Matrix<double, 6, or_rotorcraft_max_rotors, RowMajor> > G_(G);
+  Map< Matrix<double, 6, 1> > f_(f);
+
+  f_ = G_ * Matrix<double, or_rotorcraft_max_rotors, 1>::Constant(w * w);
 }

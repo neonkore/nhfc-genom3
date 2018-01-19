@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 LAAS/CNRS
+ * Copyright (c) 2016-2018 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution  and  use  in  source  and binary  forms,  with  or  without
@@ -32,11 +32,17 @@
 extern "C" {
 #endif
 
-  int	nhfc_controller(const nhfc_ids_servo_s *servo,
+  int	nhfc_controller(const nhfc_ids_body_s *body,
+                        const nhfc_ids_servo_s *servo,
                         const or_pose_estimator_state *state,
                         const or_pose_estimator_state *desired,
                         nhfc_log_s *log,
-                        double *thrust, double torque[3]);
+                        or_rotorcraft_rotor_control *wprop);
+
+  void	nhfc_invert_G(const double G[6 * or_rotorcraft_max_rotors],
+                      double iG[or_rotorcraft_max_rotors * 6]);
+  void	nhfc_Gw2(const double G[6 * or_rotorcraft_max_rotors], const double w,
+                 double f[6]);
 
 #ifdef __cplusplus
 }

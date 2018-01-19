@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 LAAS/CNRS
+ * Copyright (c) 2015-2018 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -23,57 +23,70 @@
 #include <unistd.h>
 
 #include "nhfc_c_types.h"
+
 #include "codels.h"
 
 
-/* --- Attribute set_vlimit --------------------------------------------- */
+/* --- Attribute set_wlimit --------------------------------------------- */
 
-/** Validation codel nhfc_set_vlimit of attribute set_vlimit.
+/** Validation codel nhfc_set_wlimit of attribute set_wlimit.
  *
  * Returns genom_ok.
  * Throws .
  */
 genom_event
-nhfc_set_vlimit(double vmin, double vmax, nhfc_ids_servo_s *servo,
+nhfc_set_wlimit(double wmin, double wmax, nhfc_ids_body_s *body,
                 const genom_context self)
 {
-  (void)self; /* -Wunused-parameter */
+  double f[6];
+  int i;
 
-  servo->fmax = vmax * vmax * servo->kf;
-  servo->fmin = vmin * vmin * servo->kf;
+  nhfc_Gw2(body->G, wmin, f);
+  for(i = 0; i < 3; i++) body->thrust_min[i] = f[i];
+
+  nhfc_Gw2(body->G, wmax, f);
+  for(i = 0; i < 3; i++) body->thrust_max[i] = f[i];
+
   return genom_ok;
 }
 
 
-/* --- Attribute set_servo_geom ----------------------------------------- */
+/* --- Attribute set_geom ----------------------------------------------- */
 
-/** Validation codel nhfc_set_servo_geom of attribute set_servo_geom.
+/** Validation codel nhfc_set_geom of attribute set_geom.
  *
  * Returns genom_ok.
  * Throws .
  */
 genom_event
-nhfc_set_servo_geom(double kf, nhfc_ids_servo_s *servo,
-                    const genom_context self)
+nhfc_set_geom(const double G[48], nhfc_ids_body_s *body,
+              const genom_context self)
 {
-  (void)self; /* -Wunused-parameter */
+  double f[6];
+  int i;
 
-  servo->fmax = servo->vmax * servo->vmax * kf;
-  servo->fmin = servo->vmin * servo->vmin * kf;
+  nhfc_invert_G(G, body->iG);
+
+  nhfc_Gw2(G, body->wmin, f);
+  for(i = 0; i < 3; i++) body->thrust_min[0] = f[0];
+
+  nhfc_Gw2(G, body->wmax, f);
+  for(i = 0; i < 3; i++) body->thrust_max[0] = f[0];
+
   return genom_ok;
 }
 
 
-/* --- Attribute set_servo_emerg ---------------------------------------- */
+/* --- Attribute set_emerg ---------------------------------------------- */
 
-/** Validation codel nhfc_set_servo_emerg of attribute set_servo_emerg.
+/** Validation codel nhfc_set_emerg of attribute set_emerg.
  *
  * Returns genom_ok.
  * Throws .
  */
 genom_event
-nhfc_set_servo_emerg(nhfc_ids_servo_s_emerg_s *emerg,
-                     const genom_context self)
+nhfc_set_emerg(nhfc_ids_servo_s_emerg_s *emerg,
+               const genom_context self)
 {
   emerg->dx = emerg->dx * emerg->dx / 9.;
   emerg->dq = emerg->dq * emerg->dq / 9.;

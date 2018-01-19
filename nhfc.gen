@@ -1,5 +1,5 @@
 /*/
- * Copyright (c) 2015-2017 LAAS/CNRS
+ * Copyright (c) 2015-2018 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -37,22 +37,27 @@ component nhfc {
   native log_s;
 
   ids {
+    struct body_s {
+      double G[6 * or_rotorcraft::max_rotors]; /* velocities^2 to wrench */
+      double iG[or_rotorcraft::max_rotors * 6]; /* wrench to velocities^2 */
+
+      double J[3 * 3]; /* inertia matrix */
+      double mass;
+
+      double wmin, wmax;
+      double thrust_min[3], thrust_max[3];
+    } body;
+
     struct servo_s {
       struct sat_s { double x, v, ix; } sat;
+
       struct gain_s {
         double Kpxy, Kpz, Kqxy, Kqz, Kvxy, Kvz, Kwxy, Kwz;
         double Kixy, Kiz;
       } gain;
-      double mass;
-
-      double vmin, vmax;
-      double fmin, fmax;
-
-      double d;
-      double kf;
-      double c;
 
       double ramp;
+      double scale;
 
       struct emerg_s {
         double descent;
@@ -68,19 +73,23 @@ component nhfc {
 
   attribute set_saturation(in servo.sat);
   attribute set_servo_gain(in servo.gain);
-  attribute set_mass(in servo.mass);
-  attribute set_vlimit(in servo.vmin, in servo.vmax) {
-    validate nhfc_set_vlimit(local in vmin, local in vmax,
-                             inout servo);
+  attribute set_mass(in body.mass);
+  attribute set_wlimit(
+    in body.wmin =: "Minimum propeller velocity",
+    in body.wmax =: "Maximum propeller velocity") {
+    validate nhfc_set_wlimit(local in wmin, local in wmax, inout body);
   };
-  attribute set_servo_geom(in servo.d, in servo.kf, in servo.c) {
-    validate nhfc_set_servo_geom(local in kf, inout servo);
+  attribute set_geom(
+    in body.G =: "Mapping from propellers velocity^2 to wrench",
+    in body.J =: "Inertia matrix") {
+    validate nhfc_set_geom(local in G, inout body);
   };
-  attribute set_servo_emerg(in servo.emerg) {
-    validate nhfc_set_servo_emerg(local inout emerg);
+  attribute set_emerg(in servo.emerg) {
+    validate nhfc_set_emerg(local inout emerg);
   };
 
   attribute get_servo_parameters(out servo);
+  attribute get_body_parameters(out body);
   attribute get_desired(out desired);
 
   const unsigned short control_period_ms = 1;
@@ -92,8 +101,8 @@ component nhfc {
       yield init;
     codel<init> nhfc_main_init(in desired, out rotor_input)
       yield pause::init, control;
-    codel<control> nhfc_main_control(in servo, inout desired, in state,
-                                     inout log, out rotor_input)
+    codel<control> nhfc_main_control(in body, inout servo, inout desired,
+                                     in state, inout log, out rotor_input)
       yield pause::control;
     codel<stop> mk_main_stop(out rotor_input)
       yield ether;

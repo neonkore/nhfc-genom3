@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 LAAS/CNRS
+ * Copyright (c) 2015-2018 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -27,8 +27,6 @@
 
 /* --- Task main -------------------------------------------------------- */
 
-static double nhfc_scale;
-
 /** Codel nhfc_main_start of task main.
  *
  * Triggered by nhfc_start.
@@ -37,6 +35,35 @@ static double nhfc_scale;
 genom_event
 nhfc_main_start(nhfc_ids *ids, const genom_context self)
 {
+  static const double kf = 6.5e-4;
+  static const double c = 0.0154;
+  static const double d = 0.23;
+
+  ids->body = (nhfc_ids_body_s){
+    /* mikrokopter quadrotors defaults */
+    .G = {
+         0.,    0.,   0.,    0.,   0., 0., 0., 0.,
+         0.,    0.,   0.,    0.,   0., 0., 0., 0.,
+         kf,    kf,   kf,    kf,   0., 0., 0., 0.,
+
+         0.,  d*kf,   0., -d*kf,   0., 0., 0., 0.,
+      -d*kf,    0., d*kf,    0.,   0., 0., 0., 0.,
+       c*kf, -c*kf, c*kf, -c*kf,   0., 0., 0., 0.
+    },
+
+    .J = {
+      0.015,    0.,    0.,
+      0.,    0.015,    0.,
+      0.,       0., 0.015
+    },
+
+    .mass = 1.0,
+
+    .wmax = 90., .wmin = 16.
+  };
+  nhfc_set_geom(ids->body.G, &ids->body, self);
+  nhfc_set_wlimit(ids->body.wmin, ids->body.wmax, &ids->body, self);
+
   ids->servo = (nhfc_ids_servo_s){
     .sat = { .x = 0.10, .v = 0.1, .ix = 0.10 },
     .gain = {
@@ -44,11 +71,9 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
       .Kqxy = 2.3, .Kwxy = .23, .Kqz = .2, .Kwz = .02,
       .Kixy = 0., .Kiz = 0.
     },
-    .mass = 1.0,
-    .vmax = 90., .vmin = 16.,
-    .d = 0.23, .kf = 6.5e-4,.c = 0.0154,
 
     .ramp = 3,
+    .scale = 0.,
 
     .emerg = {
       .descent = .1,
@@ -58,9 +83,6 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
       .dw = 20. * 20. * M_PI*M_PI/180./180./9.
     }
   };
-
-  nhfc_set_vlimit(ids->servo.vmin, ids->servo.vmax, &ids->servo, self);
-  nhfc_scale = 0.;
 
   ids->desired.pos._present = false;
   ids->desired.pos_cov._present = false;
@@ -116,7 +138,7 @@ nhfc_main_init(const or_pose_estimator_state *desired,
   input_data->ts.nsec = tv.tv_usec * 1000;
   input_data->control = or_rotorcraft_velocity;
 
-  input_data->desired._length = 4;
+  input_data->desired._length = 4; /* XXX assumes a quadrotor */
   for(i = 0; i < 4; i++)
     input_data->desired._buffer[i] = 0.;
 
@@ -132,7 +154,7 @@ nhfc_main_init(const or_pose_estimator_state *desired,
  * Yields to nhfc_pause_control.
  */
 genom_event
-nhfc_main_control(const nhfc_ids_servo_s *servo,
+nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
                   or_pose_estimator_state *desired,
                   const nhfc_state *state, nhfc_log_s **log,
                   const nhfc_rotor_input *rotor_input,
@@ -140,11 +162,14 @@ nhfc_main_control(const nhfc_ids_servo_s *servo,
 {
   const or_pose_estimator_state *state_data = NULL;
   or_rotorcraft_input *input_data;
-  double thrust, torque[3];
   struct timeval tv;
-  double f[4] = { 0., 0., 0., 0. };
   size_t i;
   int s;
+
+  input_data = rotor_input->data(self);
+  if (!input_data) return nhfc_pause_control;
+  for(i = 0; i < input_data->desired._length; i++)
+    input_data->desired._buffer[i] = 0.;
 
   /* current state */
   if (state->read(self) || !(state_data = state->data(self)))
@@ -161,71 +186,24 @@ nhfc_main_control(const nhfc_ids_servo_s *servo,
   }
 
   /* controller */
-  s = nhfc_controller(servo, state_data, desired, *log, &thrust, torque);
+  s = nhfc_controller(body, servo, state_data, desired, *log,
+                      &input_data->desired);
   if (s) return nhfc_pause_control;
-
-  /* thrust limitation */
-  if (thrust < 4*servo->fmin) thrust = 4*servo->fmin;
-  if (thrust > 4*servo->fmax) thrust = 4*servo->fmax;
-
-  /* forces */
-  f[0] = thrust/4 - torque[1]/servo->d/2. + torque[2]/servo->c/4;
-  f[1] = thrust/4 + torque[0]/servo->d/2. - torque[2]/servo->c/4;
-  f[2] = thrust/4 + torque[1]/servo->d/2. + torque[2]/servo->c/4;
-  f[3] = thrust/4 - torque[0]/servo->d/2. - torque[2]/servo->c/4;
-
-  /* torque limitation */
-  if(f[0] < servo->fmin || f[0] > servo->fmax ||
-     f[1] < servo->fmin || f[1] > servo->fmax ||
-     f[2] < servo->fmin || f[2] > servo->fmax ||
-     f[3] < servo->fmin || f[3] > servo->fmax) {
-    double kmin = 0.;
-    double kmax = 1.;
-    double k;
-
-    while(kmax - kmin > 1e-3) {
-      k = (kmin + kmax)/2.;
-      f[0] = thrust/4 - k * torque[1]/servo->d/2. + k * torque[2]/servo->c/4;
-      f[1] = thrust/4 + k * torque[0]/servo->d/2. - k * torque[2]/servo->c/4;
-      f[2] = thrust/4 + k * torque[1]/servo->d/2. + k * torque[2]/servo->c/4;
-      f[3] = thrust/4 - k * torque[0]/servo->d/2. - k * torque[2]/servo->c/4;
-
-      if(f[0] < servo->fmin || f[0] > servo->fmax ||
-         f[1] < servo->fmin || f[1] > servo->fmax ||
-         f[2] < servo->fmin || f[2] > servo->fmax ||
-         f[3] < servo->fmin || f[3] > servo->fmax)
-        kmax = k;
-      else
-        kmin = k;
-    }
-
-    torque[0] *= k;
-    torque[1] *= k;
-    torque[2] *= k;
-  }
 
   /* output */
 output:
-  input_data = rotor_input->data(self);
-  if (!input_data) return nhfc_pause_control;
-
   if (state_data) {
     input_data->ts = state_data->ts;
   } else {
     input_data->ts.sec = tv.tv_sec;
     input_data->ts.nsec = tv.tv_usec * 1000;
   }
-  input_data->control = or_rotorcraft_velocity;
 
-  input_data->desired._length = 4;
-  for(i = 0; i < 4; i++)
-    input_data->desired._buffer[i] = (f[i] > 0.) ? sqrt(f[i]/servo->kf) : 0.;
-
-  if (nhfc_scale < 1.) {
+  if (servo->scale < 1.) {
     for(i = 0; i < input_data->desired._length; i++)
-      input_data->desired._buffer[i] *= nhfc_scale;
+      input_data->desired._buffer[i] *= servo->scale;
 
-    nhfc_scale += 1e-3 * nhfc_control_period_ms / servo->ramp;
+    servo->scale += 1e-3 * nhfc_control_period_ms / servo->ramp;
   }
 
   rotor_input->write(self);
