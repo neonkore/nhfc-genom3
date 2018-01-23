@@ -98,7 +98,10 @@ nhfc_wo_main(const nhfc_ids_body_s *body, const nhfc_ids_wo_s *wo,
         1e-9 * rotor_data->rotor._buffer[i].ts.nsec)
       return nhfc_pause_main;
 
-    wprop[i] = rotor_data->rotor._buffer[i].velocity;
+    if (rotor_data->rotor._buffer[i].spinning)
+      wprop[i] = rotor_data->rotor._buffer[i].velocity;
+    else
+      wprop[i] = 0.;
   }
 
 
