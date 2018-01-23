@@ -145,6 +145,5 @@ nhfc_wo_main(const nhfc_ids_body_s *body, const nhfc_ids_wo_s *wo,
 genom_event
 mk_wo_stop(nhfc_ids *ids, const genom_context self)
 {
-  /* skeleton sample: insert your code */
-  /* skeleton sample */ return nhfc_ether;
+  return nhfc_ether;
 }
