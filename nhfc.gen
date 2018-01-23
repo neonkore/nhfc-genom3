@@ -109,7 +109,7 @@ component nhfc {
 
     codel<start> nhfc_main_start(out ::ids)
       yield init;
-    codel<init> nhfc_main_init(in desired, out rotor_input)
+    codel<init> nhfc_main_init(in desired, in state, out rotor_input)
       yield pause::init, control;
     codel<control> nhfc_main_control(in body, inout servo, inout desired,
                                      in state, inout log, out rotor_input)

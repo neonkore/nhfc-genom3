@@ -119,6 +119,7 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
  */
 genom_event
 nhfc_main_init(const or_pose_estimator_state *desired,
+               const nhfc_state *state,
                const nhfc_rotor_input *rotor_input,
                const genom_context self)
 {
@@ -128,6 +129,9 @@ nhfc_main_init(const or_pose_estimator_state *desired,
 
   /* switch to servo mode upon reception of the first valid position */
   if (desired->pos._present) return nhfc_control;
+
+  /* update current state - used by the wo task */
+  state->read(self);
 
   /* output zero (minimal) velocity */
   input_data = rotor_input->data(self);
