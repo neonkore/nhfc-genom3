@@ -39,10 +39,10 @@ nhfc_wo_start(nhfc_ids *ids,
   or_wrench_estimator_state *wrench_data;
 
   ids->wo = (nhfc_ids_wo_s){
-    .K = { 1., 1., 1., 1., 1., 1. }
+    .K = { 10., 10., 10., 10., 10., 10. }
   };
 
-  /* output zero (minimal) velocity */
+  /* initialize to no estimated wrench */
   wrench_data = external_wrench->data(self);
 
   wrench_data->ts.sec = 0;
