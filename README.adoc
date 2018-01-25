@@ -641,6 +641,27 @@ Stop tracking a desired position
 
 '''
 
+[[set_wo_zero]]
+=== set_wo_zero (activity)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `double` `duration` (default `"2"`) Standstill acquisition time
+
+a|.Context
+[disc]
+  * In task `<<wo>>`
+  (frequency 100.0 _Hz_)
+  * Updates port `<<external_wrench>>`
+  * Interrupts `<<set_wo_zero>>`
+|===
+
+Compute wrench observer bias.
+
+'''
+
 [[log]]
 === log (function)
 

@@ -153,3 +153,69 @@ mk_wo_stop(nhfc_ids *ids, const genom_context self)
 {
   return nhfc_ether;
 }
+
+
+/* --- Activity set_wo_zero --------------------------------------------- */
+
+/** Codel nhfc_wo_zero_start of activity set_wo_zero.
+ *
+ * Triggered by nhfc_start.
+ * Yields to nhfc_collect.
+ */
+genom_event
+nhfc_wo_zero_start(double accum[6], uint32_t *n,
+                   const genom_context self)
+{
+  int i;
+
+  for(i = 0; i < 6; i++) accum[i] = 0.;
+  *n = 0;
+
+  return nhfc_collect;
+}
+
+/** Codel nhfc_wo_zero_collect of activity set_wo_zero.
+ *
+ * Triggered by nhfc_collect.
+ * Yields to nhfc_pause_collect, nhfc_main.
+ */
+genom_event
+nhfc_wo_zero_collect(double duration,
+                     const nhfc_external_wrench *external_wrench,
+                     double accum[6], uint32_t *n,
+                     const genom_context self)
+{
+  or_wrench_estimator_state *wrench_data;
+
+  wrench_data = external_wrench->data(self);
+
+  if (wrench_data->force._present) {
+    accum[0] += wrench_data->force._value.x;
+    accum[1] += wrench_data->force._value.y;
+    accum[2] += wrench_data->force._value.z;
+  }
+  if (wrench_data->torque._present) {
+    accum[3] += wrench_data->torque._value.x;
+    accum[4] += wrench_data->torque._value.y;
+    accum[5] += wrench_data->torque._value.z;
+  }
+
+  return (++(*n) < duration * 1000./nhfc_wo_period_ms) ?
+    nhfc_pause_collect : nhfc_main;
+}
+
+/** Codel nhfc_wo_zero_main of activity set_wo_zero.
+ *
+ * Triggered by nhfc_main.
+ * Yields to nhfc_ether.
+ */
+genom_event
+nhfc_wo_zero_main(const double accum[6], uint32_t n, double bias[6],
+                  const genom_context self)
+{
+  int i;
+
+  for(i = 0; i < 6; i++) bias[i] += accum[i] / n;
+
+  return nhfc_ether;
+}

@@ -222,6 +222,25 @@ component nhfc {
       yield ether;
   };
 
+  activity set_wo_zero(
+    in double duration = 2.: "Standstill acquisition time") {
+    doc "Compute wrench observer bias.";
+
+    task wo;
+
+    local double accum[6];
+    local unsigned long n;
+
+    codel<start> nhfc_wo_zero_start(out accum, out n)
+      yield collect;
+    codel<collect> nhfc_wo_zero_collect(in duration, in external_wrench,
+                                        inout accum, inout n)
+      yield pause::collect, main;
+    codel<main> nhfc_wo_zero_main(in accum, in n, inout wo.bias)
+      yield ether;
+
+    interrupt set_wo_zero;
+  };
 
 
   /* --- logging ----------------------------------------------------------- */
