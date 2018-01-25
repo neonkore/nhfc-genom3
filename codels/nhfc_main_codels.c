@@ -234,8 +234,8 @@ nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
   }
 
   /* position controller */
-  s = nhfc_controller(body, servo, state_data, desired, *log,
-                      &input_data->desired);
+  s = nhfc_controller(body, servo, state_data, desired, wrench_data,
+                      *log, &input_data->desired);
   if (s) return nhfc_pause_control;
 
   /* output */

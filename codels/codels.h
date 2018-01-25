@@ -36,6 +36,7 @@ extern "C" {
                         const nhfc_ids_servo_s *servo,
                         const or_pose_estimator_state *state,
                         const or_pose_estimator_state *desired,
+                        const or_wrench_estimator_state *exwrench,
                         nhfc_log_s *log,
                         or_rotorcraft_rotor_control *wprop);
 
@@ -84,13 +85,16 @@ struct nhfc_log_s {
   uint32_t decimation;
   size_t missed, total;
 
-# define nhfc_logfmt	" %e "
+# define nhfc_logfmt	" %g "
 # define nhfc_log_header_fmt                                            \
-  "ts thrust fx fy fz tx ty tz "                                        \
+  "ts "                                                                 \
+  "fx fy fz tx ty tz "                                                  \
+  "exfx exfy exfz extx exty extz "                                      \
   "xd yd zd rolld pitchd yawd vxd vyd vzd wxd wyd wzd axd ayd azd "     \
   "e_x e_y e_z e_vx e_vy e_vz e_rx e_ry e_rz e_wx e_wy e_wz"
 # define nhfc_log_fmt                                                   \
-  "%d.%09d " nhfc_logfmt                                                \
+  "%d.%09d "                                                            \
+  nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \
   nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \
   nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \
   nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt nhfc_logfmt \
