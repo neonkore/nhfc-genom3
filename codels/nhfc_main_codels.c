@@ -224,9 +224,8 @@ nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
   }
 
   /* admittance filter  */
+  wrench_data = external_wrench->data(self);
   if (af->enable) {
-    wrench_data = external_wrench->data(self);
-
     s = nhfc_adm_filter(body, af, reference, wrench_data, desired);
     if (s) return nhfc_pause_control;
   } else {
