@@ -99,6 +99,15 @@ nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
     wr << Vector3d::Zero();
   }
 
+  if (reference->acc._present) {
+    ar <<
+      reference->acc._value.ax,
+      reference->acc._value.ay,
+      reference->acc._value.az;
+  } else {
+    ar << Vector3d::Zero();
+  }
+
 
   /* desired */
   if (desired->pos._present) {
