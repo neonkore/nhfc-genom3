@@ -39,7 +39,10 @@ nhfc_wo_start(nhfc_ids *ids,
   or_wrench_estimator_state *wrench_data;
 
   ids->wo = (nhfc_ids_wo_s){
-    .K = { 10., 10., 10., 10., 10., 10. }
+    .K = { 10., 10., 10., 10., 10., 10. },
+
+    .bias = { 0. },
+    .dz = { 0. },
   };
 
   /* initialize to no estimated wrench */
@@ -87,6 +90,11 @@ nhfc_wo_main(const nhfc_ids_body_s *body, const nhfc_ids_wo_s *wo,
   gettimeofday(&tv, NULL);
   now = tv.tv_sec + 1e-6 * tv.tv_usec;
 
+  /* reset flags in case of failure */
+  wrench_data = external_wrench->data(self);
+  wrench_data->force._present = false;
+  wrench_data->torque._present = false;
+
   /* rotor measurements */
   if (rotor_measure->read(self)) return nhfc_pause_main;
   rotor_data = rotor_measure->data(self);
@@ -116,8 +124,6 @@ nhfc_wo_main(const nhfc_ids_body_s *body, const nhfc_ids_wo_s *wo,
   /* external wrench */
   s = nhfc_wrench_observer(body, wo, state_data, wprop, xF, xT);
   if (s) return nhfc_pause_main;
-
-  wrench_data = external_wrench->data(self);
 
   wrench_data->ts = state_data->ts;
 

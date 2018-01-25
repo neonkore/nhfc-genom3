@@ -62,7 +62,7 @@ nhfc_wrench_observer(const nhfc_ids_body_s *body,
   Map< const Matrix<double,
                     6, or_rotorcraft_max_rotors, RowMajor> > G(body->G);
   Map< const Matrix<double, 3, 3, RowMajor> > J(body->J);
-
+  size_t i;
 
   /* current state - XXX do something if state not present / uncertain */
   if (state->pos._present && !std::isnan(state->pos._value.qw))
@@ -109,8 +109,20 @@ nhfc_wrench_observer(const nhfc_ids_body_s *body,
 
 
   /* output */
-  xF[0] = exF(0); xF[1] = exF(1); xF[2] = exF(2);
-  xT[0] = exT(0); xT[1] = exT(1); xT[2] = exT(2);
+  static const double slope = 10.; /* sigmoid slope at dead zone end */
+
+  static const double f = 4 * (slope - 0.5);
+  static const double thr = 1 + 10. / f; /* ln(1./ 1e-4 precision) */
+
+  for(i = 0; i < 3; i++) {
+    xF[i] = exF(i) - wo->bias[i];
+    if (fabs(xF[i]) < thr * wo->dz[i])
+      xF[i] *= 1. / (1. + exp(f * (1. - fabs(xF[i])/wo->dz[i])));
+
+    xT[i] = exT(i) - wo->bias[i + 3];
+    if (fabs(xT[i]) < thr * wo->dz[i + 3])
+      xT[i] *= 1. / (1. + exp(f * (1. - fabs(xT[i])/wo->dz[i + 3])));
+  }
 
   return 0;
 }

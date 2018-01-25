@@ -96,6 +96,59 @@ nhfc_set_emerg(nhfc_ids_servo_s_emerg_s *emerg,
 }
 
 
+/* --- Attribute set_af_parameters -------------------------------------- */
+
+/** Validation codel nhfc_set_af_parameters of attribute set_af_parameters.
+ *
+ * Returns genom_ok.
+ * Throws .
+ */
+genom_event
+nhfc_set_af_parameters(const double J[9], const genom_context self)
+{
+  nhfc_adm_J(J);
+  return genom_ok;
+}
+
+
+/* --- Attribute set_af_enable ------------------------------------------ */
+
+/** Validation codel nhfc_set_af_enable of attribute set_af_enable.
+ *
+ * Returns genom_ok.
+ * Throws .
+ */
+genom_event
+nhfc_set_af_enable(bool enable, const nhfc_ids_af_s *af,
+                   const or_pose_estimator_state *desired,
+                   or_pose_estimator_state *reference,
+                   const genom_context self)
+{
+  /* Let current reference be the desired position when switching off.
+   *
+   * If reference is again updated by a running servo() activity, this is
+   * a supervision issue, so we don't care here. */
+  if (!enable && af->enable) {
+    *reference = *desired;
+
+    reference->vel._present = true;
+    reference->vel._value.vx = 0.;
+    reference->vel._value.vy = 0.;
+    reference->vel._value.vz = 0.;
+    reference->vel._value.wx = 0.;
+    reference->vel._value.wy = 0.;
+    reference->vel._value.wz = 0.;
+
+    reference->acc._present = true;
+    reference->acc._value.ax = 0.;
+    reference->acc._value.ay = 0.;
+    reference->acc._value.az = 0.;
+  }
+
+  return genom_ok;
+}
+
+
 /* --- Function set_state ----------------------------------------------- */
 
 /** Codel nhfc_set_state of function set_state.
@@ -104,35 +157,36 @@ nhfc_set_emerg(nhfc_ids_servo_s_emerg_s *emerg,
  */
 genom_event
 nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
-               const or_t3d_acc *acc, or_pose_estimator_state *desired,
+               const or_t3d_acc *acc,
+               or_pose_estimator_state *reference,
                const genom_context self)
 {
   struct timeval tv;
   (void)self; /* -Wunused-parameter */
 
   gettimeofday(&tv, NULL);
-  desired->ts.sec = tv.tv_sec;
-  desired->ts.nsec = tv.tv_usec * 1000.;
+  reference->ts.sec = tv.tv_sec;
+  reference->ts.nsec = tv.tv_usec * 1000.;
 
   if (isnan(pos->x) || isnan(pos->qw))
-    desired->pos._present = false;
+    reference->pos._present = false;
   else {
-    desired->pos._present = true;
-    desired->pos._value = *pos;
+    reference->pos._present = true;
+    reference->pos._value = *pos;
   }
 
   if (isnan(vel->vx) || isnan(vel->wx))
-    desired->vel._present = false;
+    reference->vel._present = false;
   else {
-    desired->vel._present = true;
-    desired->vel._value = *vel;
+    reference->vel._present = true;
+    reference->vel._value = *vel;
   }
 
   if (isnan(acc->ax))
-    desired->acc._present = false;
+    reference->acc._present = false;
   else {
-    desired->acc._present = true;
-    desired->acc._value = *acc;
+    reference->acc._present = true;
+    reference->acc._value = *acc;
   }
 
   return genom_ok;
@@ -147,37 +201,37 @@ nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
  */
 genom_event
 nhfc_set_position(double x, double y, double z, double yaw,
-                  or_pose_estimator_state *desired,
+                  or_pose_estimator_state *reference,
                   const genom_context self)
 {
   struct timeval tv;
   (void)self; /* -Wunused-parameter */
 
   gettimeofday(&tv, NULL);
-  desired->ts.sec = tv.tv_sec;
-  desired->ts.nsec = tv.tv_usec * 1000.;
+  reference->ts.sec = tv.tv_sec;
+  reference->ts.nsec = tv.tv_usec * 1000.;
 
-  desired->pos._present = true;
-  desired->pos._value.x = x;
-  desired->pos._value.y = y;
-  desired->pos._value.z = z;
-  desired->pos._value.qw = cos(yaw/2.);
-  desired->pos._value.qx = 0.;
-  desired->pos._value.qy = 0.;
-  desired->pos._value.qz = sin(yaw/2.);
+  reference->pos._present = true;
+  reference->pos._value.x = x;
+  reference->pos._value.y = y;
+  reference->pos._value.z = z;
+  reference->pos._value.qw = cos(yaw/2.);
+  reference->pos._value.qx = 0.;
+  reference->pos._value.qy = 0.;
+  reference->pos._value.qz = sin(yaw/2.);
 
-  desired->vel._present = true;
-  desired->vel._value.vx = 0.;
-  desired->vel._value.vy = 0.;
-  desired->vel._value.vz = 0.;
-  desired->vel._value.wx = 0.;
-  desired->vel._value.wy = 0.;
-  desired->vel._value.wz = 0.;
+  reference->vel._present = true;
+  reference->vel._value.vx = 0.;
+  reference->vel._value.vy = 0.;
+  reference->vel._value.vz = 0.;
+  reference->vel._value.wx = 0.;
+  reference->vel._value.wy = 0.;
+  reference->vel._value.wz = 0.;
 
-  desired->acc._present = true;
-  desired->acc._value.ax = 0.;
-  desired->acc._value.ay = 0.;
-  desired->acc._value.az = 0.;
+  reference->acc._present = true;
+  reference->acc._value.ax = 0.;
+  reference->acc._value.ay = 0.;
+  reference->acc._value.az = 0.;
 
   return genom_ok;
 }
@@ -190,19 +244,19 @@ nhfc_set_position(double x, double y, double z, double yaw,
  * Returns genom_ok.
  */
 genom_event
-nhfc_servo_stop(or_pose_estimator_state *desired,
+nhfc_servo_stop(or_pose_estimator_state *reference,
                 const genom_context self)
 {
   struct timeval tv;
   (void)self; /* -Wunused-parameter */
 
   gettimeofday(&tv, NULL);
-  desired->ts.sec = tv.tv_sec;
-  desired->ts.nsec = tv.tv_usec * 1000.;
+  reference->ts.sec = tv.tv_sec;
+  reference->ts.nsec = tv.tv_usec * 1000.;
 
-  desired->pos._present = false;
-  desired->vel._present = false;
-  desired->acc._present = false;
+  reference->pos._present = false;
+  reference->vel._present = false;
+  reference->acc._present = false;
 
   return genom_ok;
 }

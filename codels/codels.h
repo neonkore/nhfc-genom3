@@ -44,6 +44,12 @@ extern "C" {
   void	nhfc_Gw2(const double G[6 * or_rotorcraft_max_rotors], const double w,
                  double f[6]);
 
+  int	nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
+                        const or_pose_estimator_state *reference,
+                        const or_wrench_estimator_state *exwrench,
+                        or_pose_estimator_state *desired);
+  void	nhfc_adm_J(const double J[3 * 3]);
+
   int	nhfc_wrench_observer(const nhfc_ids_body_s *body,
                              const nhfc_ids_wo_s *wo,
                              const or_pose_estimator_state *state,

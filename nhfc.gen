@@ -69,10 +69,26 @@ component nhfc {
       } emerg;
     } servo;
 
+    struct af_s {
+      boolean enable;
+
+      double mass;	/* apparent mass */
+      double B[6];	/* apparent damping */
+      double K[6];	/* apparent sping stiffness */
+      double J[3 * 3];	/* apparent inertia matrix */
+
+      or::rb3d::force force;
+      or::rb3d::torque torque;
+    } af;
+
+    or_pose_estimator::state reference;
     or_pose_estimator::state desired;
 
     struct wo_s {
       double K[6];	/* observer gains */
+
+      double bias[6];	/* bias */
+      double dz[6];	/* dead zone */
     } wo;
 
     /* logging */
@@ -96,11 +112,27 @@ component nhfc {
     validate nhfc_set_emerg(local inout emerg);
   };
   attribute set_wo_gains(in wo.K =: "Wrench observer gains");
+  attribute set_wo_dz(in wo.dz =: "Wrench observer dead zone");
+
+  attribute set_af_parameters(
+    in af.mass =: "Apparent mass",
+    in af.B =: "Apparent damping",
+    in af.K =: "Apparent sprinf stiffness",
+    in af.J =: "Apparent inertia matrix") {
+    validate nhfc_set_af_parameters(local in J);
+  };
+
+  attribute set_af_wrench(in af.force, in af.torque);
+  attribute set_af_enable(in af.enable) {
+    validate nhfc_set_af_enable(local in enable, in af, in desired,
+                                ids out reference);
+  };
 
   attribute get_servo_parameters(out servo);
   attribute get_body_parameters(out body);
-  attribute get_desired(out desired);
+  attribute get_reference(out reference);
   attribute get_wo_parameters(out wo);
+  attribute get_af_parameters(out af);
 
   const unsigned short control_period_ms = 1;
 
@@ -109,10 +141,12 @@ component nhfc {
 
     codel<start> nhfc_main_start(out ::ids)
       yield init;
-    codel<init> nhfc_main_init(in desired, in state, out rotor_input)
+    codel<init> nhfc_main_init(ids in reference, in state, out rotor_input)
       yield pause::init, control;
-    codel<control> nhfc_main_control(in body, inout servo, inout desired,
-                                     in state, inout log, out rotor_input)
+    codel<control> nhfc_main_control(in body, inout servo, inout af,
+                                     in state, in external_wrench,
+                                     ids inout reference, inout desired,
+                                     inout log, out rotor_input)
       yield pause::control;
     codel<stop> mk_main_stop(out rotor_input)
       yield ether;
@@ -125,7 +159,7 @@ component nhfc {
     doc		"Track a desired position";
     task	main;
 
-    codel<start> nhfc_servo_main(in reference, out desired)
+    codel<start> nhfc_servo_main(port in reference::in, ids out reference)
       yield pause::start, ether;
 
     throw e_input;
@@ -137,7 +171,7 @@ component nhfc {
     in or::t3d::acc acc =: "Acceleration") {
     doc		"Set the desired state";
 
-    codel nhfc_set_state(in pos, in vel, in acc, out desired);
+    codel nhfc_set_state(in pos, in vel, in acc, ids out reference);
 
     interrupt servo;
   };
@@ -146,7 +180,7 @@ component nhfc {
     in double x, in double y, in double z, in double yaw) {
     doc		"Set the desired position";
 
-    codel nhfc_set_position(in x, in y, in z, in yaw, out desired);
+    codel nhfc_set_position(in x, in y, in z, in yaw, ids out reference);
 
     interrupt servo;
   };
@@ -155,7 +189,7 @@ component nhfc {
     doc		"Set the desired position";
     task	main;
 
-    codel<start> nhfc_set_current_position(in state, out desired)
+    codel<start> nhfc_set_current_position(in state, ids out reference)
       yield ether;
 
     interrupt servo;
@@ -165,7 +199,7 @@ component nhfc {
   function stop() {
     doc		"Stop tracking a desired position";
 
-    codel nhfc_servo_stop(out desired);
+    codel nhfc_servo_stop(ids out reference);
 
     interrupt servo;
   };
@@ -187,6 +221,7 @@ component nhfc {
     codel<stop> mk_wo_stop(inout ::ids)
       yield ether;
   };
+
 
 
   /* --- logging ----------------------------------------------------------- */

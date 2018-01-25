@@ -22,6 +22,7 @@ libnhfc_codels_la_SOURCES+=	nhfc_main_codels.c
 libnhfc_codels_la_SOURCES+=	nhfc_wo_codels.c
 
 libnhfc_codels_la_SOURCES+=	controller.cc
+libnhfc_codels_la_SOURCES+=	admittance.cc
 libnhfc_codels_la_SOURCES+=	observer.cc
 libnhfc_codels_la_SOURCES+=	codels.h
 

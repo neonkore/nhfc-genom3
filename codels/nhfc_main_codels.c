@@ -84,12 +84,40 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
     }
   };
 
-  ids->desired.pos._present = false;
-  ids->desired.pos_cov._present = false;
-  ids->desired.vel._present = false;
-  ids->desired.vel_cov._present = false;
-  ids->desired.acc._present = false;
-  ids->desired.acc_cov._present = false;
+  ids->af = (nhfc_ids_af_s){
+    .enable = false,
+
+    .mass = ids->body.mass,
+    .B = { 0. },
+    .K = { 0. },
+    .J =  {
+      ids->body.J[0],             0.,             0.,
+                  0., ids->body.J[4],             0.,
+                  0.,             0., ids->body.J[8]
+    },
+
+    .force = { 0. },
+    .torque = { 0. },
+  };
+  nhfc_adm_J(ids->af.J);
+
+  ids->reference = (or_pose_estimator_state){
+    .pos._present = false,
+    .pos_cov._present = false,
+    .vel._present = false,
+    .vel_cov._present = false,
+    .acc._present = false,
+    .acc_cov._present = false
+  };
+
+  ids->desired = (or_pose_estimator_state){
+    .pos._present = false,
+    .pos_cov._present = false,
+    .vel._present = false,
+    .vel_cov._present = false,
+    .acc._present = false,
+    .acc_cov._present = false
+  };
 
   /* init logging */
   ids->log = malloc(sizeof(*ids->log));
@@ -118,7 +146,7 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
  * Yields to nhfc_pause_init, nhfc_control.
  */
 genom_event
-nhfc_main_init(const or_pose_estimator_state *desired,
+nhfc_main_init(const or_pose_estimator_state *reference,
                const nhfc_state *state,
                const nhfc_rotor_input *rotor_input,
                const genom_context self)
@@ -128,7 +156,7 @@ nhfc_main_init(const or_pose_estimator_state *desired,
   int i;
 
   /* switch to servo mode upon reception of the first valid position */
-  if (desired->pos._present) return nhfc_control;
+  if (reference->pos._present) return nhfc_control;
 
   /* update current state - used by the wo task */
   state->read(self);
@@ -159,17 +187,23 @@ nhfc_main_init(const or_pose_estimator_state *desired,
  */
 genom_event
 nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
-                  or_pose_estimator_state *desired,
-                  const nhfc_state *state, nhfc_log_s **log,
+                  nhfc_ids_af_s *af, const nhfc_state *state,
+                  const nhfc_external_wrench *external_wrench,
+                  or_pose_estimator_state *reference,
+                  or_pose_estimator_state *desired, nhfc_log_s **log,
                   const nhfc_rotor_input *rotor_input,
                   const genom_context self)
 {
   const or_pose_estimator_state *state_data = NULL;
+  or_wrench_estimator_state *wrench_data;
   or_rotorcraft_input *input_data;
   struct timeval tv;
   size_t i;
   int s;
 
+  gettimeofday(&tv, NULL);
+
+  /* reset propeller velocities by default */
   input_data = rotor_input->data(self);
   if (!input_data) return nhfc_pause_control;
   for(i = 0; i < input_data->desired._length; i++)
@@ -178,18 +212,28 @@ nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
   /* current state */
   if (state->read(self) || !(state_data = state->data(self)))
     goto output;
-  gettimeofday(&tv, NULL);
   if (tv.tv_sec + 1e-6 * tv.tv_usec >
       0.5 + state_data->ts.sec + 1e-9 * state_data->ts.nsec)
     goto output;
 
+  /* deal with obsolete reference */
   if (tv.tv_sec + 1e-6 * tv.tv_usec >
-      0.5 + desired->ts.sec + 1e-9 * desired->ts.nsec) {
-    desired->vel._present = false;
-    desired->acc._present = false;
+      0.5 + reference->ts.sec + 1e-9 * reference->ts.nsec) {
+    reference->vel._present = false;
+    reference->acc._present = false;
   }
 
-  /* controller */
+  /* admittance filter  */
+  if (af->enable) {
+    wrench_data = external_wrench->data(self);
+
+    s = nhfc_adm_filter(body, af, reference, wrench_data, desired);
+    if (s) return nhfc_pause_control;
+  } else {
+    *desired = *reference;
+  }
+
+  /* position controller */
   s = nhfc_controller(body, servo, state_data, desired, *log,
                       &input_data->desired);
   if (s) return nhfc_pause_control;
@@ -255,17 +299,20 @@ mk_main_stop(const nhfc_rotor_input *rotor_input,
  * Throws nhfc_e_input.
  */
 genom_event
-nhfc_servo_main(const nhfc_reference *reference,
-                or_pose_estimator_state *desired,
+nhfc_servo_main(const nhfc_reference *in,
+                or_pose_estimator_state *reference,
                 const genom_context self)
 {
   const or_pose_estimator_state *ref_data;
 
-  if (reference->read(self)) return nhfc_e_input(self);
-  ref_data = reference->data(self);
+  if (in->read(self)) return nhfc_e_input(self);
+  ref_data = in->data(self);
   if (!ref_data) return nhfc_e_input(self);
 
-  *desired = *ref_data;
+  /* check if timestamps have changed */
+  if (reference->ts.nsec != ref_data->ts.nsec ||
+      reference->ts.sec != ref_data->ts.sec)
+    *reference = *ref_data;
 
   return nhfc_pause_start;
 }
@@ -281,7 +328,7 @@ nhfc_servo_main(const nhfc_reference *reference,
  */
 genom_event
 nhfc_set_current_position(const nhfc_state *state,
-                          or_pose_estimator_state *desired,
+                          or_pose_estimator_state *reference,
                           const genom_context self)
 {
   const or_pose_estimator_state *state_data;
@@ -299,29 +346,29 @@ nhfc_set_current_position(const nhfc_state *state,
   qz = state_data->pos._value.qz;
   yaw = atan2(2 * (qw*qz + qx*qy), 1 - 2 * (qy*qy + qz*qz));
 
-  desired->ts = state_data->ts;
+  reference->ts = state_data->ts;
 
-  desired->pos._present = true;
-  desired->pos._value.x = state_data->pos._value.x;
-  desired->pos._value.y = state_data->pos._value.y;
-  desired->pos._value.z = state_data->pos._value.z;
-  desired->pos._value.qw = cos(yaw/2.);
-  desired->pos._value.qx = 0.;
-  desired->pos._value.qy = 0.;
-  desired->pos._value.qz = sin(yaw/2.);
+  reference->pos._present = true;
+  reference->pos._value.x = state_data->pos._value.x;
+  reference->pos._value.y = state_data->pos._value.y;
+  reference->pos._value.z = state_data->pos._value.z;
+  reference->pos._value.qw = cos(yaw/2.);
+  reference->pos._value.qx = 0.;
+  reference->pos._value.qy = 0.;
+  reference->pos._value.qz = sin(yaw/2.);
 
-  desired->vel._present = true;
-  desired->vel._value.vx = 0.;
-  desired->vel._value.vy = 0.;
-  desired->vel._value.vz = 0.;
-  desired->vel._value.wx = 0.;
-  desired->vel._value.wy = 0.;
-  desired->vel._value.wz = 0.;
+  reference->vel._present = true;
+  reference->vel._value.vx = 0.;
+  reference->vel._value.vy = 0.;
+  reference->vel._value.vz = 0.;
+  reference->vel._value.wx = 0.;
+  reference->vel._value.wy = 0.;
+  reference->vel._value.wz = 0.;
 
-  desired->acc._present = true;
-  desired->acc._value.ax = 0.;
-  desired->acc._value.ay = 0.;
-  desired->acc._value.az = 0.;
+  reference->acc._present = true;
+  reference->acc._value.ax = 0.;
+  reference->acc._value.ay = 0.;
+  reference->acc._value.az = 0.;
 
   return nhfc_ether;
 }

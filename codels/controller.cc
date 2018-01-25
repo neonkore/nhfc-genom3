@@ -36,7 +36,9 @@
 #include "codels.h"
 
 /*
- * This file implements the controller described in:
+ * --- nhfc_controller -----------------------------------------------------
+ *
+ * Implements the controller described in:
  *
  * T. Lee, M. Leoky and N. H. McClamroch, "Geometric tracking control of a
  * quadrotor UAV on SE(3)", 49th IEEE Conference on Decision and Control

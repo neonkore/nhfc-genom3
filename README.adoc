@@ -315,6 +315,72 @@ a|.Inputs
 
 '''
 
+[[set_wo_dz]]
+=== set_wo_dz (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `double` `dz[6]` Wrench observer dead zone
+
+|===
+
+'''
+
+[[set_af_parameters]]
+=== set_af_parameters (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `double` `mass` Apparent mass
+
+ * `double` `B[6]` Apparent damping
+
+ * `double` `K[6]` Apparent sprinf stiffness
+
+ * `double` `J[9]` Apparent inertia matrix
+
+|===
+
+'''
+
+[[set_af_wrench]]
+=== set_af_wrench (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `struct ::or::rb3d::force` `force`
+ ** `double` `x`
+ ** `double` `y`
+ ** `double` `z`
+
+ * `struct ::or::rb3d::torque` `torque`
+ ** `double` `x`
+ ** `double` `y`
+ ** `double` `z`
+
+|===
+
+'''
+
+[[set_af_enable]]
+=== set_af_enable (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `enable`
+
+|===
+
+'''
+
 [[get_servo_parameters]]
 === get_servo_parameters (attribute)
 
@@ -374,14 +440,14 @@ a|.Outputs
 
 '''
 
-[[get_desired]]
-=== get_desired (attribute)
+[[get_reference]]
+=== get_reference (attribute)
 
 [role="small", width="50%", float="right", cols="1"]
 |===
 a|.Outputs
 [disc]
- * `struct ::or_pose_estimator::state` `desired`
+ * `struct ::or_pose_estimator::state` `reference`
  ** `struct ::or::time::ts` `ts`
  *** `unsigned long` `sec`
  *** `unsigned long` `nsec`
@@ -425,6 +491,34 @@ a|.Outputs
 [disc]
  * `struct ::nhfc::ids::wo_s` `wo`
  ** `double` `K[6]`
+ ** `double` `bias[6]`
+ ** `double` `dz[6]`
+
+|===
+
+'''
+
+[[get_af_parameters]]
+=== get_af_parameters (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Outputs
+[disc]
+ * `struct ::nhfc::ids::af_s` `af`
+ ** `boolean` `enable`
+ ** `double` `mass`
+ ** `double` `B[6]`
+ ** `double` `K[6]`
+ ** `double` `J[9]`
+ ** `struct ::or::rb3d::force` `force`
+ *** `double` `x`
+ *** `double` `y`
+ *** `double` `z`
+ ** `struct ::or::rb3d::torque` `torque`
+ *** `double` `x`
+ *** `double` `y`
+ *** `double` `z`
 
 |===
 
@@ -607,6 +701,7 @@ a|.Context
   * Frequency 1000.0 _Hz_
 * Updates port `<<rotor_input>>`
 * Reads port `<<state>>`
+* Updates port `<<external_wrench>>`
 |===
 
 '''
