@@ -88,8 +88,8 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
     .enable = false,
 
     .mass = ids->body.mass,
-    .B = { 0. },
-    .K = { 0. },
+    .B = { 8., 8., 8., 8., 8., 8. },
+    .K = { 10., 10., 10., 10., 10., 10. },
     .J =  {
       ids->body.J[0],             0.,             0.,
                   0., ids->body.J[4],             0.,
