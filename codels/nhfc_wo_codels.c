@@ -42,7 +42,6 @@ nhfc_wo_start(nhfc_ids *ids,
     .K = { 10., 10., 10., 10., 10., 10. },
 
     .bias = { 0. },
-    .dz = { 0. },
   };
 
   /* initialize to no estimated wrench */

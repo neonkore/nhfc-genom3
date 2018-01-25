@@ -88,7 +88,6 @@ component nhfc {
       double K[6];	/* observer gains */
 
       double bias[6];	/* bias */
-      double dz[6];	/* dead zone */
     } wo;
 
     /* logging */
@@ -112,7 +111,6 @@ component nhfc {
     validate nhfc_set_emerg(local inout emerg);
   };
   attribute set_wo_gains(in wo.K =: "Wrench observer gains");
-  attribute set_wo_dz(in wo.dz =: "Wrench observer dead zone");
 
   attribute set_af_parameters(
     in af.mass =: "Apparent mass",

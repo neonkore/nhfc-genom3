@@ -315,19 +315,6 @@ a|.Inputs
 
 '''
 
-[[set_wo_dz]]
-=== set_wo_dz (attribute)
-
-[role="small", width="50%", float="right", cols="1"]
-|===
-a|.Inputs
-[disc]
- * `double` `dz[6]` Wrench observer dead zone
-
-|===
-
-'''
-
 [[set_af_parameters]]
 === set_af_parameters (attribute)
 
@@ -404,8 +391,6 @@ a|.Outputs
  *** `double` `Kwz`
  *** `double` `Kixy`
  *** `double` `Kiz`
- ** `double` `fmin[8]`
- ** `double` `fmax[8]`
  ** `double` `ramp`
  ** `double` `scale`
  ** `struct ::nhfc::ids::servo_s::emerg_s` `emerg`
@@ -492,7 +477,6 @@ a|.Outputs
  * `struct ::nhfc::ids::wo_s` `wo`
  ** `double` `K[6]`
  ** `double` `bias[6]`
- ** `double` `dz[6]`
 
 |===
 
