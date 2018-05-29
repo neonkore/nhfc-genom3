@@ -135,9 +135,11 @@ nhfc_set_af_enable(bool enable, const nhfc_ids_af_s *af,
     reference->vel._value.vx = 0.;
     reference->vel._value.vy = 0.;
     reference->vel._value.vz = 0.;
-    reference->vel._value.wx = 0.;
-    reference->vel._value.wy = 0.;
-    reference->vel._value.wz = 0.;
+
+    reference->avel._present = true;
+    reference->avel._value.wx = 0.;
+    reference->avel._value.wy = 0.;
+    reference->avel._value.wz = 0.;
 
     reference->acc._present = true;
     reference->acc._value.ax = 0.;
@@ -156,7 +158,8 @@ nhfc_set_af_enable(bool enable, const nhfc_ids_af_s *af,
  * Returns genom_ok.
  */
 genom_event
-nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
+nhfc_set_state(const or_t3d_pos *pos, const or_t3d_att *att,
+               const or_t3d_vel *vel, const or_t3d_avel *avel,
                const or_t3d_acc *acc,
                or_pose_estimator_state *reference,
                const genom_context self)
@@ -168,18 +171,32 @@ nhfc_set_state(const or_t3d_pos *pos, const or_t3d_vel *vel,
   reference->ts.sec = tv.tv_sec;
   reference->ts.nsec = tv.tv_usec * 1000.;
 
-  if (isnan(pos->x) || isnan(pos->qw))
+  if (isnan(pos->x))
     reference->pos._present = false;
   else {
     reference->pos._present = true;
     reference->pos._value = *pos;
   }
 
-  if (isnan(vel->vx) || isnan(vel->wx))
+  if (isnan(att->qw))
+    reference->att._present = false;
+  else {
+    reference->att._present = true;
+    reference->att._value = *att;
+  }
+
+  if (isnan(vel->vx))
     reference->vel._present = false;
   else {
     reference->vel._present = true;
     reference->vel._value = *vel;
+  }
+
+  if (isnan(avel->wx))
+    reference->avel._present = false;
+  else {
+    reference->avel._present = true;
+    reference->avel._value = *avel;
   }
 
   if (isnan(acc->ax))
@@ -215,18 +232,22 @@ nhfc_set_position(double x, double y, double z, double yaw,
   reference->pos._value.x = x;
   reference->pos._value.y = y;
   reference->pos._value.z = z;
-  reference->pos._value.qw = cos(yaw/2.);
-  reference->pos._value.qx = 0.;
-  reference->pos._value.qy = 0.;
-  reference->pos._value.qz = sin(yaw/2.);
+
+  reference->att._present = true;
+  reference->att._value.qw = cos(yaw/2.);
+  reference->att._value.qx = 0.;
+  reference->att._value.qy = 0.;
+  reference->att._value.qz = sin(yaw/2.);
 
   reference->vel._present = true;
   reference->vel._value.vx = 0.;
   reference->vel._value.vy = 0.;
   reference->vel._value.vz = 0.;
-  reference->vel._value.wx = 0.;
-  reference->vel._value.wy = 0.;
-  reference->vel._value.wz = 0.;
+
+  reference->avel._present = true;
+  reference->avel._value.wx = 0.;
+  reference->avel._value.wy = 0.;
+  reference->avel._value.wz = 0.;
 
   reference->acc._present = true;
   reference->acc._value.ax = 0.;
@@ -255,8 +276,11 @@ nhfc_servo_stop(or_pose_estimator_state *reference,
   reference->ts.nsec = tv.tv_usec * 1000.;
 
   reference->pos._present = false;
+  reference->att._present = false;
   reference->vel._present = false;
+  reference->avel._present = false;
   reference->acc._present = false;
+  reference->aacc._present = false;
 
   return genom_ok;
 }

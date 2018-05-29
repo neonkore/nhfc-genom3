@@ -65,15 +65,15 @@ nhfc_wrench_observer(const nhfc_ids_body_s *body,
   size_t i;
 
   /* current state - XXX do something if state not present / uncertain */
-  if (state->pos._present && !std::isnan(state->pos._value.qw))
+  if (state->att._present && !std::isnan(state->att._value.qw))
     q.coeffs() <<
-      state->pos._value.qx, state->pos._value.qy, state->pos._value.qz,
-      state->pos._value.qw;
+      state->att._value.qx, state->att._value.qy, state->att._value.qz,
+      state->att._value.qw;
   else
     q = Quaternion<double>::Identity();
 
-  if (state->vel._present && !std::isnan(state->vel._value.wx))
-    w << state->vel._value.wx, state->vel._value.wy, state->vel._value.wz;
+  if (state->avel._present && !std::isnan(state->avel._value.wx))
+    w << state->avel._value.wx, state->avel._value.wy, state->avel._value.wz;
   else
     w = Vector3d::Zero();
 

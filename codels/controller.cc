@@ -94,22 +94,28 @@ nhfc_controller(const nhfc_ids_body_s *body,
   if (desired->pos._present) {
     xd <<
       desired->pos._value.x, desired->pos._value.y, desired->pos._value.z;
-    qd.coeffs() <<
-      desired->pos._value.qx, desired->pos._value.qy, desired->pos._value.qz,
-      desired->pos._value.qw;
   } else {
     xd << 0., 0., 0.;
-    qd = Eigen::Quaternion<double>::Identity();
     Iex << 0., 0., 0.;
+  }
+  if (desired->att._present) {
+    qd.coeffs() <<
+      desired->att._value.qx, desired->att._value.qy, desired->att._value.qz,
+      desired->att._value.qw;
+  } else {
+    qd = Eigen::Quaternion<double>::Identity();
   }
 
   if (desired->vel._present) {
     vd <<
       desired->vel._value.vx, desired->vel._value.vy, desired->vel._value.vz;
-    wd <<
-      desired->vel._value.wx, desired->vel._value.wy, desired->vel._value.wz;
   } else {
     vd << 0., 0., 0.;
+  }
+  if (desired->avel._present) {
+    wd <<
+      desired->avel._value.wx, desired->avel._value.wy, desired->avel._value.wz;
+  } else {
     wd << 0., 0., 0.;
   }
 
@@ -138,16 +144,16 @@ nhfc_controller(const nhfc_ids_body_s *body,
     Iex << 0., 0., 0.;
   }
 
-  if (state->pos._present && !std::isnan(state->pos._value.qw) &&
-      state->pos_cov._present &&
-      state->pos_cov._value.cov[9] < servo->emerg.dq &&
-      state->pos_cov._value.cov[14] < servo->emerg.dq &&
-      state->pos_cov._value.cov[20] < servo->emerg.dq &&
-      state->pos_cov._value.cov[27] < servo->emerg.dq) {
+  if (state->att._present && !std::isnan(state->att._value.qw) &&
+      state->att_cov._present &&
+      state->att_cov._value.cov[0] < servo->emerg.dq &&
+      state->att_cov._value.cov[2] < servo->emerg.dq &&
+      state->att_cov._value.cov[5] < servo->emerg.dq &&
+      state->att_cov._value.cov[9] < servo->emerg.dq) {
     q.coeffs() <<
-      state->pos._value.qx, state->pos._value.qy, state->pos._value.qz,
-      state->pos._value.qw;
-    if (!desired->pos._present)
+      state->att._value.qx, state->att._value.qy, state->att._value.qz,
+      state->att._value.qw;
+    if (!desired->att._present)
       qd = q;
     emerg_q = false;
   } else {
@@ -168,12 +174,12 @@ nhfc_controller(const nhfc_ids_body_s *body,
     v = vd;
   }
 
-  if (state->vel._present && !std::isnan(state->vel._value.wx) &&
-      state->vel_cov._present &&
-      state->vel_cov._value.cov[9] < servo->emerg.dw &&
-      state->vel_cov._value.cov[14] < servo->emerg.dw &&
-      state->vel_cov._value.cov[20] < servo->emerg.dw) {
-    w << state->vel._value.wx, state->vel._value.wy, state->vel._value.wz;
+  if (state->avel._present && !std::isnan(state->avel._value.wx) &&
+      state->avel_cov._present &&
+      state->avel_cov._value.cov[0] < servo->emerg.dw &&
+      state->avel_cov._value.cov[2] < servo->emerg.dw &&
+      state->avel_cov._value.cov[5] < servo->emerg.dw) {
+    w << state->avel._value.wx, state->avel._value.wy, state->avel._value.wz;
     emerg_w = false;
   } else {
     emerg_w = true;

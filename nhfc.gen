@@ -14,14 +14,14 @@
  *
  *					Anthony Mallet on Tue Aug 11 2015
  */
-#pragma require "openrobots-idl >= 1.5"
+#pragma require "openrobots2-idl >= 2.0"
 
 #include "or/pose/pose_estimator.gen"
 #include "or/pose/wrench_estimator.gen"
 #include "or/robot/rotorcraft.gen"
 
 component nhfc {
-  version		"1.5";
+  version		"2.0";
   email			"openrobots@laas.fr";
   lang			"c";
   require		"genom3 >= 2.99.26";
@@ -165,11 +165,14 @@ component nhfc {
 
   function set_state(
     in or::t3d::pos pos =: "Position",
-    in or::t3d::vel vel =: "Velocity",
+    in or::t3d::att att =: "Orientation",
+    in or::t3d::vel vel =: "Linear velocity",
+    in or::t3d::avel avel =: "Angular velocity",
     in or::t3d::acc acc =: "Acceleration") {
     doc		"Set the desired state";
 
-    codel nhfc_set_state(in pos, in vel, in acc, ids out reference);
+    codel nhfc_set_state(in pos, in att, in vel, in avel, in acc,
+                         ids out reference);
 
     interrupt servo;
   };

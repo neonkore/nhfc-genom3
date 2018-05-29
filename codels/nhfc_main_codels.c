@@ -103,20 +103,34 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
 
   ids->reference = (or_pose_estimator_state){
     .pos._present = false,
+    .att._present = false,
     .pos_cov._present = false,
+    .att_cov._present = false,
+    .att_pos_cov._present = false,
     .vel._present = false,
     .vel_cov._present = false,
+    .avel._present = false,
+    .avel_cov._present = false,
     .acc._present = false,
-    .acc_cov._present = false
+    .acc_cov._present = false,
+    .aacc._present = false,
+    .aacc_cov._present = false
   };
 
   ids->desired = (or_pose_estimator_state){
     .pos._present = false,
+    .att._present = false,
     .pos_cov._present = false,
+    .att_cov._present = false,
+    .att_pos_cov._present = false,
     .vel._present = false,
     .vel_cov._present = false,
+    .avel._present = false,
+    .avel_cov._present = false,
     .acc._present = false,
-    .acc_cov._present = false
+    .acc_cov._present = false,
+    .aacc._present = false,
+    .aacc_cov._present = false
   };
 
   /* init logging */
@@ -338,11 +352,12 @@ nhfc_set_current_position(const nhfc_state *state,
   state_data = state->data(self);
   if (!state_data) return nhfc_e_input(self);
   if (!state_data->pos._present) return nhfc_e_input(self);
+  if (!state_data->att._present) return nhfc_e_input(self);
 
-  qw = state_data->pos._value.qw;
-  qx = state_data->pos._value.qx;
-  qy = state_data->pos._value.qy;
-  qz = state_data->pos._value.qz;
+  qw = state_data->att._value.qw;
+  qx = state_data->att._value.qx;
+  qy = state_data->att._value.qy;
+  qz = state_data->att._value.qz;
   yaw = atan2(2 * (qw*qz + qx*qy), 1 - 2 * (qy*qy + qz*qz));
 
   reference->ts = state_data->ts;
@@ -351,18 +366,22 @@ nhfc_set_current_position(const nhfc_state *state,
   reference->pos._value.x = state_data->pos._value.x;
   reference->pos._value.y = state_data->pos._value.y;
   reference->pos._value.z = state_data->pos._value.z;
-  reference->pos._value.qw = cos(yaw/2.);
-  reference->pos._value.qx = 0.;
-  reference->pos._value.qy = 0.;
-  reference->pos._value.qz = sin(yaw/2.);
+
+  reference->att._present = true;
+  reference->att._value.qw = cos(yaw/2.);
+  reference->att._value.qx = 0.;
+  reference->att._value.qy = 0.;
+  reference->att._value.qz = sin(yaw/2.);
 
   reference->vel._present = true;
   reference->vel._value.vx = 0.;
   reference->vel._value.vy = 0.;
   reference->vel._value.vz = 0.;
-  reference->vel._value.wx = 0.;
-  reference->vel._value.wy = 0.;
-  reference->vel._value.wz = 0.;
+
+  reference->avel._present = true;
+  reference->avel._value.wx = 0.;
+  reference->avel._value.wy = 0.;
+  reference->avel._value.wz = 0.;
 
   reference->acc._present = true;
   reference->acc._value.ax = 0.;

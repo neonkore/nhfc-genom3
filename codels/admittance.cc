@@ -75,13 +75,16 @@ nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
       reference->pos._value.x,
       reference->pos._value.y,
       reference->pos._value.z;
-    qr.coeffs() <<
-      reference->pos._value.qx,
-      reference->pos._value.qy,
-      reference->pos._value.qz,
-      reference->pos._value.qw;
   } else {
     xr = Vector3d::Zero();
+  }
+  if (reference->att._present) {
+    qr.coeffs() <<
+      reference->att._value.qx,
+      reference->att._value.qy,
+      reference->att._value.qz,
+      reference->att._value.qw;
+  } else {
     qr = Quaternion<double>::Identity();
   }
 
@@ -90,12 +93,15 @@ nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
       reference->vel._value.vx,
       reference->vel._value.vy,
       reference->vel._value.vz;
-    wr <<
-      reference->vel._value.wx,
-      reference->vel._value.wy,
-      reference->vel._value.wz;
   } else {
     vr << Vector3d::Zero();
+  }
+  if (reference->avel._present) {
+    wr <<
+      reference->avel._value.wx,
+      reference->avel._value.wy,
+      reference->avel._value.wz;
+  } else {
     wr << Vector3d::Zero();
   }
 
@@ -115,18 +121,24 @@ nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
       desired->pos._value.x,
       desired->pos._value.y,
       desired->pos._value.z;
-    qd.coeffs() <<
-      desired->pos._value.qx,
-      desired->pos._value.qy,
-      desired->pos._value.qz,
-      desired->pos._value.qw;
 
     if (!reference->pos._present) {
       xr = xd;
-      qr = qd;
     }
   } else {
     xd = xr;
+  }
+  if (desired->att._present) {
+    qd.coeffs() <<
+      desired->att._value.qx,
+      desired->att._value.qy,
+      desired->att._value.qz,
+      desired->att._value.qw;
+
+    if (!reference->att._present) {
+      qr = qd;
+    }
+  } else {
     qd = qr;
   }
 
@@ -135,12 +147,15 @@ nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
       desired->vel._value.vx,
       desired->vel._value.vy,
       desired->vel._value.vz;
-    wd <<
-      desired->vel._value.wx,
-      desired->vel._value.wy,
-      desired->vel._value.wz;
   } else {
     vd = vr;
+  }
+  if (desired->avel._present) {
+    wd <<
+      desired->avel._value.wx,
+      desired->avel._value.wy,
+      desired->avel._value.wz;
+  } else {
     wd = wr;
   }
 
@@ -225,18 +240,22 @@ nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
   desired->pos._value.x = xd(0);
   desired->pos._value.y = xd(1);
   desired->pos._value.z = xd(2);
-  desired->pos._value.qx = qd.vec()(0);
-  desired->pos._value.qy = qd.vec()(1);
-  desired->pos._value.qz = qd.vec()(2);
-  desired->pos._value.qw = qd.w();
+
+  desired->att._present = true;
+  desired->att._value.qx = qd.vec()(0);
+  desired->att._value.qy = qd.vec()(1);
+  desired->att._value.qz = qd.vec()(2);
+  desired->att._value.qw = qd.w();
 
   desired->vel._present = true;
   desired->vel._value.vx = vd(0);
   desired->vel._value.vy = vd(1);
   desired->vel._value.vz = vd(2);
-  desired->vel._value.wx = 0.; /* XXX wd(0) */
-  desired->vel._value.wy = 0.; /* XXX wd(1) */
-  desired->vel._value.wz = wd(2);
+
+  desired->avel._present = true;
+  desired->avel._value.wx = 0.; /* XXX wd(0) */
+  desired->avel._value.wy = 0.; /* XXX wd(1) */
+  desired->avel._value.wz = wd(2);
 
   desired->acc._present = true;
   desired->acc._value.ax = ad(0);
