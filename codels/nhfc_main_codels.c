@@ -101,36 +101,26 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
   };
   nhfc_adm_J(ids->af.J);
 
-  ids->reference = (or_pose_estimator_state){
+  ids->reference = (or_rigid_body_state){
     .pos._present = false,
     .att._present = false,
-    .pos_cov._present = false,
-    .att_cov._present = false,
-    .att_pos_cov._present = false,
     .vel._present = false,
-    .vel_cov._present = false,
     .avel._present = false,
-    .avel_cov._present = false,
     .acc._present = false,
-    .acc_cov._present = false,
     .aacc._present = false,
-    .aacc_cov._present = false
+    .jerk._present = false,
+    .snap._present = false
   };
 
-  ids->desired = (or_pose_estimator_state){
+  ids->desired = (or_rigid_body_state){
     .pos._present = false,
     .att._present = false,
-    .pos_cov._present = false,
-    .att_cov._present = false,
-    .att_pos_cov._present = false,
     .vel._present = false,
-    .vel_cov._present = false,
     .avel._present = false,
-    .avel_cov._present = false,
     .acc._present = false,
-    .acc_cov._present = false,
     .aacc._present = false,
-    .aacc_cov._present = false
+    .jerk._present = false,
+    .snap._present = false,
   };
 
   /* init logging */
@@ -160,7 +150,7 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
  * Yields to nhfc_pause_init, nhfc_control.
  */
 genom_event
-nhfc_main_init(const or_pose_estimator_state *reference,
+nhfc_main_init(const or_rigid_body_state *reference,
                const nhfc_state *state,
                const nhfc_rotor_input *rotor_input,
                const genom_context self)
@@ -203,8 +193,8 @@ genom_event
 nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
                   nhfc_ids_af_s *af, const nhfc_state *state,
                   const nhfc_external_wrench *external_wrench,
-                  or_pose_estimator_state *reference,
-                  or_pose_estimator_state *desired, nhfc_log_s **log,
+                  or_rigid_body_state *reference,
+                  or_rigid_body_state *desired, nhfc_log_s **log,
                   const nhfc_rotor_input *rotor_input,
                   const genom_context self)
 {
@@ -313,10 +303,10 @@ mk_main_stop(const nhfc_rotor_input *rotor_input,
  */
 genom_event
 nhfc_servo_main(const nhfc_reference *in,
-                or_pose_estimator_state *reference,
+                or_rigid_body_state *reference,
                 const genom_context self)
 {
-  const or_pose_estimator_state *ref_data;
+  const or_rigid_body_state *ref_data;
 
   if (in->read(self)) return nhfc_e_input(self);
   ref_data = in->data(self);
@@ -341,7 +331,7 @@ nhfc_servo_main(const nhfc_reference *in,
  */
 genom_event
 nhfc_set_current_position(const nhfc_state *state,
-                          or_pose_estimator_state *reference,
+                          or_rigid_body_state *reference,
                           const genom_context self)
 {
   const or_pose_estimator_state *state_data;
@@ -387,6 +377,9 @@ nhfc_set_current_position(const nhfc_state *state,
   reference->acc._value.ax = 0.;
   reference->acc._value.ay = 0.;
   reference->acc._value.az = 0.;
+
+  reference->jerk._present = false;
+  reference->snap._present = false;
 
   return nhfc_ether;
 }

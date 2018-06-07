@@ -17,6 +17,7 @@
 #pragma require "openrobots2-idl >= 2.0"
 
 #include "or/pose/pose_estimator.gen"
+#include "or/pose/rigid_body.gen"
 #include "or/pose/wrench_estimator.gen"
 #include "or/robot/rotorcraft.gen"
 
@@ -31,7 +32,7 @@ component nhfc {
   provides	or_wrench_estimator;
 
   port in	or_pose_estimator::state state;
-  port in	or_pose_estimator::state reference;
+  port in	or_rigid_body::state reference;
 
   port out	or_wrench_estimator::state external_wrench;
 
@@ -81,8 +82,8 @@ component nhfc {
       or::rb3d::torque torque;
     } af;
 
-    or_pose_estimator::state reference;
-    or_pose_estimator::state desired;
+    or_rigid_body::state reference;
+    or_rigid_body::state desired;
 
     struct wo_s {
       double K[6];	/* observer gains */

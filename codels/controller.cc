@@ -49,7 +49,7 @@ int
 nhfc_controller(const nhfc_ids_body_s *body,
                 const nhfc_ids_servo_s *servo,
                 const or_pose_estimator_state *state,
-                const or_pose_estimator_state *desired,
+                const or_rigid_body_state *desired,
                 const or_wrench_estimator_state *exwrench,
                 nhfc_log_s *log,
                 or_rotorcraft_rotor_control *wprop)

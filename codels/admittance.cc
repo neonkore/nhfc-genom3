@@ -42,9 +42,9 @@ static Eigen::Matrix3d iJ;	/* inverse apparent inertia */
 
 int
 nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
-                const or_pose_estimator_state *reference,
+                const or_rigid_body_state *reference,
                 const or_wrench_estimator_state *exwrench,
-                or_pose_estimator_state *desired)
+                or_rigid_body_state *desired)
 {
   using namespace Eigen;
 

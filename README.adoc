@@ -149,7 +149,7 @@ a|.Data structure
 |===
 a|.Data structure
 [disc]
- * `struct ::or_pose_estimator::state` `reference`
+ * `struct ::or_rigid_body::state` `reference`
  ** `struct ::or::time::ts` `ts`
  *** `unsigned long` `sec`
  *** `unsigned long` `nsec`
@@ -179,20 +179,14 @@ a|.Data structure
  *** `double` `awx`
  *** `double` `awy`
  *** `double` `awz`
- ** `optional< struct ::or::t3d::pos_cov >` `pos_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::att_cov >` `att_cov`
- *** `double` `cov[10]`
- ** `optional< struct ::or::t3d::att_pos_cov >` `att_pos_cov`
- *** `double` `cov[12]`
- ** `optional< struct ::or::t3d::vel_cov >` `vel_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::avel_cov >` `avel_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::acc_cov >` `acc_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::aacc_cov >` `aacc_cov`
- *** `double` `cov[6]`
+ ** `optional< struct ::or::t3d::jerk >` `jerk`
+ *** `double` `jx`
+ *** `double` `jy`
+ *** `double` `jz`
+ ** `optional< struct ::or::t3d::snap >` `snap`
+ *** `double` `sx`
+ *** `double` `sy`
+ *** `double` `sz`
 
 |===
 
@@ -460,7 +454,7 @@ a|.Outputs
 |===
 a|.Outputs
 [disc]
- * `struct ::or_pose_estimator::state` `reference`
+ * `struct ::or_rigid_body::state` `reference`
  ** `struct ::or::time::ts` `ts`
  *** `unsigned long` `sec`
  *** `unsigned long` `nsec`
@@ -490,20 +484,14 @@ a|.Outputs
  *** `double` `awx`
  *** `double` `awy`
  *** `double` `awz`
- ** `optional< struct ::or::t3d::pos_cov >` `pos_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::att_cov >` `att_cov`
- *** `double` `cov[10]`
- ** `optional< struct ::or::t3d::att_pos_cov >` `att_pos_cov`
- *** `double` `cov[12]`
- ** `optional< struct ::or::t3d::vel_cov >` `vel_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::avel_cov >` `avel_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::acc_cov >` `acc_cov`
- *** `double` `cov[6]`
- ** `optional< struct ::or::t3d::aacc_cov >` `aacc_cov`
- *** `double` `cov[6]`
+ ** `optional< struct ::or::t3d::jerk >` `jerk`
+ *** `double` `jx`
+ *** `double` `jy`
+ *** `double` `jz`
+ ** `optional< struct ::or::t3d::snap >` `snap`
+ *** `double` `sx`
+ *** `double` `sy`
+ *** `double` `sz`
 
 |===
 

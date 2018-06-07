@@ -120,8 +120,8 @@ nhfc_set_af_parameters(const double J[9], const genom_context self)
  */
 genom_event
 nhfc_set_af_enable(bool enable, const nhfc_ids_af_s *af,
-                   const or_pose_estimator_state *desired,
-                   or_pose_estimator_state *reference,
+                   const or_rigid_body_state *desired,
+                   or_rigid_body_state *reference,
                    const genom_context self)
 {
   /* Let current reference be the desired position when switching off.
@@ -160,8 +160,7 @@ nhfc_set_af_enable(bool enable, const nhfc_ids_af_s *af,
 genom_event
 nhfc_set_state(const or_t3d_pos *pos, const or_t3d_att *att,
                const or_t3d_vel *vel, const or_t3d_avel *avel,
-               const or_t3d_acc *acc,
-               or_pose_estimator_state *reference,
+               const or_t3d_acc *acc, or_rigid_body_state *reference,
                const genom_context self)
 {
   struct timeval tv;
@@ -218,7 +217,7 @@ nhfc_set_state(const or_t3d_pos *pos, const or_t3d_att *att,
  */
 genom_event
 nhfc_set_position(double x, double y, double z, double yaw,
-                  or_pose_estimator_state *reference,
+                  or_rigid_body_state *reference,
                   const genom_context self)
 {
   struct timeval tv;
@@ -265,7 +264,7 @@ nhfc_set_position(double x, double y, double z, double yaw,
  * Returns genom_ok.
  */
 genom_event
-nhfc_servo_stop(or_pose_estimator_state *reference,
+nhfc_servo_stop(or_rigid_body_state *reference,
                 const genom_context self)
 {
   struct timeval tv;

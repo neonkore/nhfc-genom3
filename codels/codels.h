@@ -35,7 +35,7 @@ extern "C" {
   int	nhfc_controller(const nhfc_ids_body_s *body,
                         const nhfc_ids_servo_s *servo,
                         const or_pose_estimator_state *state,
-                        const or_pose_estimator_state *desired,
+                        const or_rigid_body_state *desired,
                         const or_wrench_estimator_state *exwrench,
                         nhfc_log_s *log,
                         or_rotorcraft_rotor_control *wprop);
@@ -46,9 +46,9 @@ extern "C" {
                  double f[6]);
 
   int	nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
-                        const or_pose_estimator_state *reference,
+                        const or_rigid_body_state *reference,
                         const or_wrench_estimator_state *exwrench,
-                        or_pose_estimator_state *desired);
+                        or_rigid_body_state *desired);
   void	nhfc_adm_J(const double J[3 * 3]);
 
   int	nhfc_wrench_observer(const nhfc_ids_body_s *body,
