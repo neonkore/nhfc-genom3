@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 LAAS/CNRS
+ * Copyright (c) 2015-2019 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -33,8 +33,11 @@
  * Yields to nhfc_init.
  */
 genom_event
-nhfc_main_start(nhfc_ids *ids, const genom_context self)
+nhfc_main_start(nhfc_ids *ids, const nhfc_rotor_input *rotor_input,
+                const genom_context self)
 {
+  or_rotorcraft_input *input_data;
+
   static const double kf = 6.5e-4;
   static const double c = 0.0154;
   static const double d = 0.23;
@@ -140,6 +143,9 @@ nhfc_main_start(nhfc_ids *ids, const genom_context self)
     .decimation = 1, .missed = 0, .total = 0
   };
 
+  input_data = rotor_input->data(self);
+  if (input_data) input_data->desired._length = ids->body.rotors;
+
   return nhfc_init;
 }
 
@@ -174,8 +180,7 @@ nhfc_main_init(const or_rigid_body_state *reference,
   input_data->ts.nsec = tv.tv_usec * 1000;
   input_data->control = or_rotorcraft_velocity;
 
-  input_data->desired._length = 4; /* XXX assumes a quadrotor */
-  for(i = 0; i < 4; i++)
+  for(i = 0; i < input_data->desired._length; i++)
     input_data->desired._buffer[i] = 0.;
 
   rotor_input->write(self);
@@ -210,6 +215,7 @@ nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
   /* reset propeller velocities by default */
   input_data = rotor_input->data(self);
   if (!input_data) return nhfc_pause_control;
+  input_data->desired._length = body->rotors;
   for(i = 0; i < input_data->desired._length; i++)
     input_data->desired._buffer[i] = 0.;
 
@@ -284,8 +290,7 @@ mk_main_stop(const nhfc_rotor_input *rotor_input,
   input_data->ts.nsec = tv.tv_usec * 1000;
   input_data->control = or_rotorcraft_velocity;
 
-  input_data->desired._length = 4;
-  for(i = 0; i < 4; i++)
+  for(i = 0; i < input_data->desired._length; i++)
     input_data->desired._buffer[i] = 0.;
 
   rotor_input->write(self);
