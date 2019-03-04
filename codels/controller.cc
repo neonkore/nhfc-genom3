@@ -191,7 +191,17 @@ nhfc_controller(const nhfc_ids_body_s *body,
 
   if (emerg_x || emerg_q || emerg_v || emerg_w) {
     if (!emerg) {
-      warnx("emergency descent due to uncertain state estimation");
+      warnx(
+        emerg_x ?
+        "emergency descent due to uncertain position estimation" :
+        emerg_q ?
+        "emergency descent due to uncertain orientation estimation" :
+        emerg_v ?
+        "emergency descent due to uncertain velocity estimation" :
+        emerg_w ?
+        "emergency descent due to uncertain angular velocity estimation" :
+        "emergency descent"
+        );
       emerg = true;
     }
   } else {
