@@ -49,8 +49,8 @@ a|.Data structure
 [disc]
  * `struct ::or_rotorcraft::input` `rotor_input`
  ** `struct ::or::time::ts` `ts`
- *** `unsigned long` `sec`
- *** `unsigned long` `nsec`
+ *** `long` `sec`
+ *** `long` `nsec`
  ** `enum ::or_rotorcraft::control_type` `control` ∈ { `velocity`, `throttle` }
  ** `sequence< double, 8 >` `desired`
 
@@ -69,8 +69,8 @@ a|.Data structure
  * `struct ::or_rotorcraft::output` `rotor_measure`
  ** `sequence< struct ::or_rotorcraft::rotor_state, 8 >` `rotor`
  *** `struct ::or::time::ts` `ts`
- **** `unsigned long` `sec`
- **** `unsigned long` `nsec`
+ **** `long` `sec`
+ **** `long` `nsec`
  *** `boolean` `emerg`
  *** `boolean` `spinning`
  *** `boolean` `starting`
@@ -94,8 +94,8 @@ a|.Data structure
 [disc]
  * `struct ::or_pose_estimator::state` `state`
  ** `struct ::or::time::ts` `ts`
- *** `unsigned long` `sec`
- *** `unsigned long` `nsec`
+ *** `long` `sec`
+ *** `long` `nsec`
  ** `boolean` `intrinsic`
  ** `optional< struct ::or::t3d::pos >` `pos`
  *** `double` `x`
@@ -151,8 +151,8 @@ a|.Data structure
 [disc]
  * `struct ::or_rigid_body::state` `reference`
  ** `struct ::or::time::ts` `ts`
- *** `unsigned long` `sec`
- *** `unsigned long` `nsec`
+ *** `long` `sec`
+ *** `long` `nsec`
  ** `boolean` `intrinsic`
  ** `optional< struct ::or::t3d::pos >` `pos`
  *** `double` `x`
@@ -202,8 +202,8 @@ a|.Data structure
 [disc]
  * `struct ::or_wrench_estimator::state` `external_wrench`
  ** `struct ::or::time::ts` `ts`
- *** `unsigned long` `sec`
- *** `unsigned long` `nsec`
+ *** `long` `sec`
+ *** `long` `nsec`
  ** `boolean` `intrinsic`
  ** `optional< struct ::or::rb3d::force >` `force`
  *** `double` `x`
@@ -457,8 +457,8 @@ a|.Outputs
 [disc]
  * `struct ::or_rigid_body::state` `reference`
  ** `struct ::or::time::ts` `ts`
- *** `unsigned long` `sec`
- *** `unsigned long` `nsec`
+ *** `long` `sec`
+ *** `long` `nsec`
  ** `boolean` `intrinsic`
  ** `optional< struct ::or::t3d::pos >` `pos`
  *** `double` `x`
