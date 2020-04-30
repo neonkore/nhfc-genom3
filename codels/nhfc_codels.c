@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 LAAS/CNRS
+ * Copyright (c) 2015-2020 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution and use  in source  and binary  forms,  with or without
@@ -68,10 +68,10 @@ nhfc_set_geom(const double G[48], nhfc_ids_body_s *body,
   nhfc_invert_G(G, body->iG);
 
   nhfc_Gw2(G, body->wmin, f);
-  for(i = 0; i < 3; i++) body->thrust_min[0] = f[0];
+  for(i = 0; i < 3; i++) body->thrust_min[i] = f[i];
 
   nhfc_Gw2(G, body->wmax, f);
-  for(i = 0; i < 3; i++) body->thrust_max[0] = f[0];
+  for(i = 0; i < 3; i++) body->thrust_max[i] = f[i];
 
   /* count number of rotors from the iG matrix */
   for (i = or_rotorcraft_max_rotors - 1; i >= 0; i--) {
