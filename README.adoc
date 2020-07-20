@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015-2019 LAAS/CNRS
+// Copyright (c) 2015-2020 LAAS/CNRS
 // All rights reserved.
 //
 // Redistribution and use  in source  and binary  forms,  with or without
@@ -553,6 +553,7 @@ a|.Context
   * In task `<<main>>`
   (frequency 1000.0 _Hz_)
   * Reads port `<<reference>>`
+  * Interrupts `<<servo>>`
 |===
 
 Track a desired position
