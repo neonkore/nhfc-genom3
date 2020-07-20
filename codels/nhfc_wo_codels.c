@@ -142,13 +142,13 @@ nhfc_wo_main(const nhfc_ids_body_s *body, const nhfc_ids_wo_s *wo,
 }
 
 
-/** Codel mk_wo_stop of task wo.
+/** Codel nhfc_wo_stop of task wo.
  *
  * Triggered by nhfc_stop.
  * Yields to nhfc_ether.
  */
 genom_event
-mk_wo_stop(nhfc_ids *ids, const genom_context self)
+nhfc_wo_stop(nhfc_ids *ids, const genom_context self)
 {
   return nhfc_ether;
 }

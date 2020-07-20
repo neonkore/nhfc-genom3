@@ -269,14 +269,14 @@ output:
 }
 
 
-/** Codel mk_main_stop of task main.
+/** Codel nhfc_main_stop of task main.
  *
  * Triggered by nhfc_stop.
  * Yields to nhfc_ether.
  */
 genom_event
-mk_main_stop(const nhfc_rotor_input *rotor_input,
-             const genom_context self)
+nhfc_main_stop(const nhfc_rotor_input *rotor_input,
+               const genom_context self)
 {
   or_rotorcraft_input *input_data;
   struct timeval tv;

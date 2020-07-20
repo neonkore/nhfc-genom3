@@ -148,7 +148,7 @@ component nhfc {
                                      ids inout reference, inout desired,
                                      inout log, out rotor_input)
       yield pause::control;
-    codel<stop> mk_main_stop(out rotor_input)
+    codel<stop> nhfc_main_stop(out rotor_input)
       yield ether;
   };
 
@@ -222,7 +222,7 @@ component nhfc {
                              out external_wrench)
       yield pause::main, stop;
 
-    codel<stop> mk_wo_stop(inout ::ids)
+    codel<stop> nhfc_wo_stop(inout ::ids)
       yield ether;
   };
 
