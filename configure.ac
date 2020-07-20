@@ -1,6 +1,6 @@
 dnl Autoconf file for building nhfc codels library.
 dnl
-dnl Copyright (c) 2015-2019 LAAS/CNRS
+dnl Copyright (c) 2015-2020 LAAS/CNRS
 dnl All rights reserved.
 dnl
 dnl Redistribution and use  in source  and binary  forms,  with or without
@@ -33,10 +33,23 @@ AC_PROG_CXX
 dnl Features
 AC_SEARCH_LIBS([aio_write], [rt],, AC_MSG_ERROR([aio_write() not found], 2))
 
+
+dnl Require GNU make
+AC_CACHE_CHECK([for GNU make], [ac_cv_path_MAKE],
+  [AC_PATH_PROGS_FEATURE_CHECK([MAKE], [make gmake],
+    [case `$ac_path_MAKE --version 2>/dev/null` in
+       *GNU*) ac_cv_path_MAKE=$ac_path_MAKE; ac_path_MAKE_found=:;;
+     esac],
+    [AC_MSG_ERROR([could not find GNU make])])])
+AC_SUBST([MAKE], [$ac_cv_path_MAKE])
+
+
 dnl External packages
 PKG_CHECK_MODULES(requires, [
   openrobots2-idl >= 2.0
   genom3 >= 2.99.26
+])
+PKG_CHECK_MODULES(codels_requires, [
   eigen3
 ])
 
