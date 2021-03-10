@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015-2020 LAAS/CNRS
+// Copyright (c) 2015-2021 LAAS/CNRS
 // All rights reserved.
 //
 // Redistribution and use  in source  and binary  forms,  with or without
@@ -314,13 +314,30 @@ a|.Inputs
 a|.Inputs
 [disc]
  * `struct ::nhfc::ids::servo_s::emerg_s` `emerg`
- ** `double` `descent`
- ** `double` `dx`
- ** `double` `dq`
- ** `double` `dv`
+ ** `double` `descent` (default `"0.1"`) Vertical acceleration for emergency descent (m/s²)
+ ** `double` `dx` (default `"0.05"`) Position uncertainty threshold (m)
+ ** `double` `dq` (default `"20"`) Angular velocity uncertainty threshold (deg/s)
+ ** `double` `dv` (default `"0.2"`) Linear velocity uncertainty threshold (m/s)
  ** `double` `dw`
 
 |===
+
+Set thresholds for emergency descent.
+
+`dx`, `dq`, `dv` and `dw` represent the maximum uncertainty tolerated
+in the input <<state>> for position (`dx`), orientation (`dq`),
+linear velocity (`dv`) and angular velocity (`dw`), measured as 3
+times the standard deviation.
+By default, `dx` is 5cm, `dq` is 5⁰, `dv` is 20cm/s and `dw` 20⁰/s.
+Beyond that threshold, an emergency descent is started.
+
+As long as the emergency descent is active, the position error or
+linear velocity error are cancelled (i.e. the desired roll and pitch
+are set to 0) and a vertical acceleration of `descent` (by default
+-0.1 m/s²) is requested. The descent is based on the mass only,
+with no feedback, as the state is considered invalid. If the
+orientation is invalid in the <<state>>, then no control on the
+attitude is possible and the stability is not guaranteed ...
 
 '''
 
