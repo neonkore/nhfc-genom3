@@ -165,11 +165,18 @@ component nhfc {
       yield init;
     codel<init> nhfc_main_init(ids in reference, in state, out rotor_input)
       yield pause::init, control;
+
     codel<control> nhfc_main_control(in body, inout servo, inout af,
                                      in state, in external_wrench,
                                      ids inout reference, inout desired,
                                      inout log, out rotor_input)
-      yield pause::control;
+      yield pause::control, emergency;
+    codel<emergency> nhfc_main_emergency(in body, inout servo, inout af,
+                                         in state, in external_wrench,
+                                         ids inout reference, inout desired,
+                                         inout log, out rotor_input)
+      yield pause::emergency, control;
+
     codel<stop> nhfc_main_stop(out rotor_input)
       yield ether;
   };

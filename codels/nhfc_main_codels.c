@@ -17,6 +17,7 @@
 #include "acnhfc.h"
 
 #include <sys/time.h>
+#include <err.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -192,7 +193,7 @@ nhfc_main_init(const or_rigid_body_state *reference,
 /** Codel nhfc_main_control of task main.
  *
  * Triggered by nhfc_control.
- * Yields to nhfc_pause_control.
+ * Yields to nhfc_pause_control, nhfc_emergency.
  */
 genom_event
 nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
@@ -203,59 +204,45 @@ nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
                   const nhfc_rotor_input *rotor_input,
                   const genom_context self)
 {
-  const or_pose_estimator_state *state_data = NULL;
-  or_wrench_estimator_state *wrench_data;
-  or_rotorcraft_input *input_data;
+  or_pose_estimator_state *state_data = NULL;
+  or_wrench_estimator_state *wrench_data = external_wrench->data(self);
+  or_rotorcraft_input *input_data = rotor_input->data(self);
   struct timeval tv;
   size_t i;
-  int s;
+  int e;
 
   gettimeofday(&tv, NULL);
 
-  /* reset propeller velocities by default */
-  input_data = rotor_input->data(self);
-  if (!input_data) return nhfc_pause_control;
-  input_data->desired._length = body->rotors;
-  for(i = 0; i < input_data->desired._length; i++)
-    input_data->desired._buffer[i] = 0.;
+  /* read current state */
+  if (state->read(self) || !(state_data = state->data(self))) {
+    warnx("emergency stop");
+    return nhfc_emergency;
+  }
 
-  /* current state */
-  if (state->read(self) || !(state_data = state->data(self)))
-    goto output;
-  if (tv.tv_sec + 1e-6 * tv.tv_usec >
-      0.5 + state_data->ts.sec + 1e-9 * state_data->ts.nsec)
-    goto output;
-
-  /* deal with obsolete reference */
-  if (tv.tv_sec + 1e-6 * tv.tv_usec >
-      0.5 + reference->ts.sec + 1e-9 * reference->ts.nsec) {
-    reference->vel._present = false;
-    reference->acc._present = false;
+  /* check state */
+  e = nhfc_state_check(tv, servo, state_data, reference);
+  if (e) {
+    if (e & NHFC_ETS) warnx("obsolete state");
+    if (e & NHFC_EPOS) warnx("uncertain position");
+    if (e & NHFC_EATT) warnx("uncertain orientation");
+    if (e & NHFC_EVEL) warnx("uncertain velocity");
+    if (e & NHFC_EAVEL) warnx("uncertain angular velocity");
+    warnx("emergency descent");
+    return nhfc_emergency;
   }
 
   /* admittance filter  */
-  wrench_data = external_wrench->data(self);
-  if (af->enable) {
-    s = nhfc_adm_filter(body, af, reference, wrench_data, desired);
-    if (s) return nhfc_pause_control;
-  } else {
+  if (af->enable)
+    nhfc_adm_filter(body, af, reference, wrench_data, desired);
+  else
     *desired = *reference;
-  }
 
   /* position controller */
-  s = nhfc_controller(body, servo, state_data, desired, wrench_data,
-                      *log, &input_data->desired);
-  if (s) return nhfc_pause_control;
+  nhfc_controller(body, servo, state_data, desired, wrench_data,
+                  *log, &input_data->desired);
 
   /* output */
-output:
-  if (state_data) {
-    input_data->ts = state_data->ts;
-  } else {
-    input_data->ts.sec = tv.tv_sec;
-    input_data->ts.nsec = tv.tv_usec * 1000;
-  }
-
+  input_data->ts = state_data->ts;
   if (servo->scale < 1.) {
     for(i = 0; i < input_data->desired._length; i++)
       input_data->desired._buffer[i] *= servo->scale;
@@ -264,8 +251,74 @@ output:
   }
 
   rotor_input->write(self);
-
   return nhfc_pause_control;
+}
+
+
+/** Codel nhfc_main_emergency of task main.
+ *
+ * Triggered by nhfc_emergency.
+ * Yields to nhfc_pause_emergency, nhfc_control.
+ */
+genom_event
+nhfc_main_emergency(const nhfc_ids_body_s *body,
+                    nhfc_ids_servo_s *servo, nhfc_ids_af_s *af,
+                    const nhfc_state *state,
+                    const nhfc_external_wrench *external_wrench,
+                    or_rigid_body_state *reference,
+                    or_rigid_body_state *desired, nhfc_log_s **log,
+                    const nhfc_rotor_input *rotor_input,
+                    const genom_context self)
+{
+  or_pose_estimator_state *state_data = NULL;
+  or_wrench_estimator_state *wrench_data = external_wrench->data(self);
+  or_rotorcraft_input *input_data = rotor_input->data(self);
+  struct timeval tv;
+  size_t i;
+  int e;
+
+  gettimeofday(&tv, NULL);
+
+  /* read current state */
+  if (state->read(self) || !(state_data = state->data(self))) {
+    input_data->ts.sec = tv.tv_sec;
+    input_data->ts.nsec = tv.tv_usec * 1000;
+    input_data->desired._length = body->rotors;
+    for(i = 0; i < input_data->desired._length; i++)
+      input_data->desired._buffer[i] = 0.;
+
+    rotor_input->write(self);
+    return nhfc_pause_emergency;
+  }
+
+  /* check state */
+  e = nhfc_state_check(tv, servo, state_data, reference);
+  if (!e) {
+    warnx("recovered from emergency");
+    return nhfc_control;
+  }
+
+  /* admittance filter  */
+  if (af->enable)
+    nhfc_adm_filter(body, af, reference, wrench_data, desired);
+  else
+    *desired = *reference;
+
+  /* position controller */
+  nhfc_controller(body, servo, state_data, desired, wrench_data,
+                  *log, &input_data->desired);
+
+  /* output */
+  input_data->ts = state_data->ts;
+  if (servo->scale < 1.) {
+    for(i = 0; i < input_data->desired._length; i++)
+      input_data->desired._buffer[i] *= servo->scale;
+
+    servo->scale += 1e-3 * nhfc_control_period_ms / servo->ramp;
+  }
+
+  rotor_input->write(self);
+  return nhfc_pause_emergency;
 }
 
 

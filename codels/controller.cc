@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 LAAS/CNRS
+ * Copyright (c) 2016-2018,2021 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution  and  use  in  source  and binary  forms,  with  or  without
@@ -74,8 +74,6 @@ nhfc_controller(const nhfc_ids_body_s *body,
 
   int i;
 
-  static bool emerg;
-  bool emerg_x, emerg_q, emerg_v, emerg_w;
 
   /* geometry */
   Map<
@@ -129,86 +127,37 @@ nhfc_controller(const nhfc_ids_body_s *body,
 
 
   /* current state */
-  if (state->pos._present && !std::isnan(state->pos._value.x) &&
-      state->pos_cov._present &&
-      state->pos_cov._value.cov[0] < servo->emerg.dx &&
-      state->pos_cov._value.cov[2] < servo->emerg.dx &&
-      state->pos_cov._value.cov[5] < servo->emerg.dx) {
+  if (state->pos._present) {
     x << state->pos._value.x, state->pos._value.y, state->pos._value.z;
     if (!desired->pos._present)
       xd = x + Eigen::Vector3d(0, 0, -5e-2);
-    emerg_x = false;
   } else {
-    emerg_x = true;
     x = xd;
+    ad = Eigen::Vector3d(0, 0, - servo->emerg.descent);
     Iex << 0., 0., 0.;
   }
 
-  if (state->att._present && !std::isnan(state->att._value.qw) &&
-      state->att_cov._present &&
-      state->att_cov._value.cov[0] < servo->emerg.dq &&
-      state->att_cov._value.cov[2] < servo->emerg.dq &&
-      state->att_cov._value.cov[5] < servo->emerg.dq &&
-      state->att_cov._value.cov[9] < servo->emerg.dq) {
+  if (state->att._present) {
     q.coeffs() <<
       state->att._value.qx, state->att._value.qy, state->att._value.qz,
       state->att._value.qw;
     if (!desired->att._present)
       qd = q;
-    emerg_q = false;
   } else {
-    emerg_q = true;
     q = qd;
   }
   R = q.matrix();
 
-  if (state->vel._present && !std::isnan(state->vel._value.vx) &&
-      state->vel_cov._present &&
-      state->vel_cov._value.cov[0] < servo->emerg.dv &&
-      state->vel_cov._value.cov[2] < servo->emerg.dv &&
-      state->vel_cov._value.cov[5] < servo->emerg.dv) {
+  if (state->vel._present) {
     v << state->vel._value.vx, state->vel._value.vy, state->vel._value.vz;
-    emerg_v = false;
   } else {
-    emerg_v = true;
     v = vd;
   }
 
-  if (state->avel._present && !std::isnan(state->avel._value.wx) &&
-      state->avel_cov._present &&
-      state->avel_cov._value.cov[0] < servo->emerg.dw &&
-      state->avel_cov._value.cov[2] < servo->emerg.dw &&
-      state->avel_cov._value.cov[5] < servo->emerg.dw) {
+  if (state->avel._present) {
     w << state->avel._value.wx, state->avel._value.wy, state->avel._value.wz;
-    emerg_w = false;
   } else {
-    emerg_w = true;
     w = wd;
-  }
-
-  if (emerg_x || emerg_v)
-    ad = Eigen::Vector3d(0, 0, - servo->emerg.descent);
-
-  if (emerg_x || emerg_q || emerg_v || emerg_w) {
-    if (!emerg) {
-      warnx(
-        emerg_x ?
-        "emergency descent due to uncertain position estimation" :
-        emerg_q ?
-        "emergency descent due to uncertain orientation estimation" :
-        emerg_v ?
-        "emergency descent due to uncertain velocity estimation" :
-        emerg_w ?
-        "emergency descent due to uncertain angular velocity estimation" :
-        "emergency descent"
-        );
-      emerg = true;
-    }
-  } else {
-    if (emerg) {
-      warnx("recovered from emergency");
-      emerg = false;
-    }
   }
 
 
@@ -351,6 +300,82 @@ nhfc_controller(const nhfc_ids_body_s *body,
   }
 
   return 0;
+}
+
+
+/*
+ * --- nhfc_state_check ----------------------------------------------------
+ *
+ * Return non-zero in case of emergency
+ */
+
+int
+nhfc_state_check(const struct timeval now,
+                 const nhfc_ids_servo_s *servo,
+                 or_pose_estimator_state *state,
+                 or_rigid_body_state *desired)
+{
+  int e = NHFC_EOK;
+
+  /* deal with obsolete reference */
+  if (now.tv_sec + 1e-6 * now.tv_usec >
+      0.5 + desired->ts.sec + 1e-9 * desired->ts.nsec) {
+    desired->vel._present = false;
+    desired->acc._present = false;
+  }
+
+  /* check state */
+  if (now.tv_sec + 1e-6 * now.tv_usec >
+      0.5 + state->ts.sec + 1e-9 * state->ts.nsec) {
+    state->pos._present = false;
+    state->att._present = false;
+    state->vel._present = false;
+    state->avel._present = false;
+    return NHFC_ETS;
+  }
+
+  if (!state->pos._present
+      || std::isnan(state->pos._value.x)
+      || !state->pos_cov._present
+      || state->pos_cov._value.cov[0] > servo->emerg.dx
+      || state->pos_cov._value.cov[2] > servo->emerg.dx
+      || state->pos_cov._value.cov[5] > servo->emerg.dx) {
+    state->pos._present = false;
+    e |= NHFC_EPOS;
+  }
+
+  if (!state->att._present
+      || std::isnan(state->att._value.qw) ||
+      !state->att_cov._present ||
+      state->att_cov._value.cov[0] > servo->emerg.dq ||
+      state->att_cov._value.cov[2] > servo->emerg.dq ||
+      state->att_cov._value.cov[5] > servo->emerg.dq ||
+      state->att_cov._value.cov[9] > servo->emerg.dq) {
+    state->att._present = false;
+    e |= NHFC_EATT;
+  }
+
+  if (!state->vel._present
+      || std::isnan(state->vel._value.vx)
+      || !state->vel_cov._present
+      || state->vel_cov._value.cov[0] > servo->emerg.dv
+      || state->vel_cov._value.cov[2] > servo->emerg.dv
+      || state->vel_cov._value.cov[5] > servo->emerg.dv) {
+    state->vel._present = false;
+    e |= NHFC_EVEL;
+  }
+
+  if (!state->avel._present
+      || std::isnan(state->avel._value.wx)
+      || !state->avel_cov._present
+      || state->avel_cov._value.cov[0] > servo->emerg.dw
+      || state->avel_cov._value.cov[2] > servo->emerg.dw
+      || state->avel_cov._value.cov[5] > servo->emerg.dw) {
+    state->avel._present = false;
+    e |= NHFC_EVEL;
+  }
+
+  return e;
 }
 
 

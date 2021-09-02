@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 LAAS/CNRS
+ * Copyright (c) 2016-2018,2021 LAAS/CNRS
  * All rights reserved.
  *
  * Redistribution  and  use  in  source  and binary  forms,  with  or  without
@@ -28,22 +28,35 @@
 
 #include "nhfc_c_types.h"
 
+enum nhfce {
+  NHFC_EOK =	0,
+  NHFC_ETS =	1 << 0,
+  NHFC_EPOS =	1 << 1,
+  NHFC_EATT =	1 << 2,
+  NHFC_EVEL =	1 << 3,
+  NHFC_EAVEL =	1 << 4,
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
   int	nhfc_controller(const nhfc_ids_body_s *body,
-                        const nhfc_ids_servo_s *servo,
-                        const or_pose_estimator_state *state,
-                        const or_rigid_body_state *desired,
-                        const or_wrench_estimator_state *exwrench,
-                        nhfc_log_s *log,
-                        or_rotorcraft_rotor_control *wprop);
+                const nhfc_ids_servo_s *servo,
+                const or_pose_estimator_state *state,
+                const or_rigid_body_state *desired,
+                const or_wrench_estimator_state *exwrench,
+                nhfc_log_s *log,
+                or_rotorcraft_rotor_control *wprop);
+  int	nhfc_state_check(const struct timeval now,
+                const nhfc_ids_servo_s *servo,
+                or_pose_estimator_state *state,
+                or_rigid_body_state *desired);
 
   void	nhfc_invert_G(const double G[6 * or_rotorcraft_max_rotors],
-                      double iG[or_rotorcraft_max_rotors * 6]);
+                double iG[or_rotorcraft_max_rotors * 6]);
   void	nhfc_Gw2(const double G[6 * or_rotorcraft_max_rotors], const double w,
-                 double f[6]);
+                double f[6]);
 
   int	nhfc_adm_filter(const nhfc_ids_body_s *body, const nhfc_ids_af_s *af,
                         const or_rigid_body_state *reference,
