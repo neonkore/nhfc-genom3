@@ -215,7 +215,8 @@ nhfc_main_control(const nhfc_ids_body_s *body, nhfc_ids_servo_s *servo,
 
   /* read current state */
   if (state->read(self) || !(state_data = state->data(self))) {
-    warnx("emergency stop");
+    warnx("state unavailable");
+    warnx("emergency descent");
     return nhfc_emergency;
   }
 
@@ -281,14 +282,10 @@ nhfc_main_emergency(const nhfc_ids_body_s *body,
 
   /* read current state */
   if (state->read(self) || !(state_data = state->data(self))) {
-    input_data->ts.sec = tv.tv_sec;
-    input_data->ts.nsec = tv.tv_usec * 1000;
-    input_data->desired._length = body->rotors;
-    for(i = 0; i < input_data->desired._length; i++)
-      input_data->desired._buffer[i] = 0.;
-
-    rotor_input->write(self);
-    return nhfc_pause_emergency;
+    state_data = &(or_pose_estimator_state){
+      /* data without any 'present' field except current timestamp for logs */
+      .ts.sec = tv.tv_sec, .ts.nsec = 1000 * tv.tv_usec
+    };
   }
 
   /* check state */
