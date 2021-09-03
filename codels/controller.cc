@@ -372,7 +372,7 @@ nhfc_state_check(const struct timeval now,
       || state->avel_cov._value.cov[2] > servo->emerg.dw
       || state->avel_cov._value.cov[5] > servo->emerg.dw) {
     state->avel._present = false;
-    e |= NHFC_EVEL;
+    e |= NHFC_EAVEL;
   }
 
   return e;
